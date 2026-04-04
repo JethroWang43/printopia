@@ -7,6 +7,285 @@ let employeeAccessMode = false;
 let currentEmployeeName = '';
 const EMBED_VIEW_MODE = (new URLSearchParams(window.location.search).get('view') || 'all').toLowerCase();
 const CHECKED_BY_STORAGE_KEY = 'checklistCheckedBy';
+const PROGRESSION_ORDER_STORAGE_KEY = 'orderProgress';
+const activeTaskFilters = {
+    status: 'all',
+    assignee: 'all',
+    project: 'all',
+    due: 'all'
+};
+
+let currentBoardLists = [];
+let currentChecklistDragItem = null;
+
+function emitHciInteraction(action, payload = {}) {
+    const detail = {
+        action,
+        source: 'trello-task-filters',
+        timestamp: new Date().toISOString(),
+        payload
+    };
+
+    document.dispatchEvent(new CustomEvent('hci:interaction', { detail }));
+
+    if (window.parent && window.parent !== window) {
+        window.parent.postMessage({
+            type: 'hci:interaction',
+            detail
+        }, '*');
+    }
+}
+
+function slugifyFilterValue(value) {
+    return String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-');
+}
+
+function extractProjectNameFromCard(card) {
+    const match = String(card?.name || '').match(/#([a-z0-9][a-z0-9-]*)/i);
+    if (match && match[1]) {
+        return match[1].toLowerCase();
+    }
+    return slugifyFilterValue(card?.listName || 'general');
+}
+
+function matchesDueFilter(card, dueFilter) {
+    if (dueFilter === 'all') return true;
+
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+    const nextWeek = new Date(todayStart);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+
+    if (!card?.due) {
+        return dueFilter === 'noDue';
+    }
+
+    const dueDate = new Date(card.due);
+    if (Number.isNaN(dueDate.getTime())) {
+        return dueFilter === 'noDue';
+    }
+
+    if (dueFilter === 'overdue') {
+        return dueDate < todayStart;
+    }
+    if (dueFilter === 'today') {
+        return dueDate >= todayStart && dueDate < tomorrowStart;
+    }
+    if (dueFilter === 'next7') {
+        return dueDate >= todayStart && dueDate < nextWeek;
+    }
+
+    return true;
+}
+
+function cardMatchesFilters(card) {
+    const statusMatch = activeTaskFilters.status === 'all' || slugifyFilterValue(card.listName) === activeTaskFilters.status;
+
+    const assigneeNames = Array.from(extractAssigneeNamesFromCard(card)).map(name => slugifyFilterValue(name));
+    const assigneeMatch = activeTaskFilters.assignee === 'all' || assigneeNames.includes(activeTaskFilters.assignee);
+
+    const projectMatch = activeTaskFilters.project === 'all' || extractProjectNameFromCard(card) === activeTaskFilters.project;
+    const dueMatch = matchesDueFilter(card, activeTaskFilters.due);
+
+    return statusMatch && assigneeMatch && projectMatch && dueMatch;
+}
+
+function getFilteredLists(lists) {
+    return (lists || []).map(list => {
+        const filteredCards = (list.cards || []).filter(card => cardMatchesFilters({ ...card, listName: list.name }));
+        return {
+            ...list,
+            cards: filteredCards
+        };
+    });
+}
+
+function updateFilterButtonLabels() {
+    const statusLabel = document.querySelector('#statusFilterLabel');
+    const assigneeLabel = document.querySelector('#assigneeFilterLabel');
+    const projectLabel = document.querySelector('#projectFilterLabel');
+    const dueLabel = document.querySelector('#dueFilterLabel');
+
+    if (statusLabel) {
+        const active = document.querySelector('#statusFilterMenu .dropdown-item.active');
+        statusLabel.textContent = active ? active.textContent.trim() : 'All statuses';
+    }
+    if (assigneeLabel) {
+        const active = document.querySelector('#assigneeFilterMenu .dropdown-item.active');
+        assigneeLabel.textContent = active ? active.textContent.trim() : 'All assignees';
+    }
+    if (projectLabel) {
+        const active = document.querySelector('#projectFilterMenu .dropdown-item.active');
+        projectLabel.textContent = active ? active.textContent.trim() : 'All projects';
+    }
+    if (dueLabel) {
+        const active = document.querySelector('#dueFilterMenu .dropdown-item.active');
+        dueLabel.textContent = active ? active.textContent.trim() : 'Due date';
+    }
+}
+
+function mapListNameToDashboardStatus(listName) {
+    const normalized = slugifyFilterValue(listName);
+
+    if (['done', 'completed', 'complete'].includes(normalized)) {
+        return 'completed';
+    }
+    if (['cancelled', 'canceled'].includes(normalized)) {
+        return 'cancelled';
+    }
+    if (['backlog', 'todo', 'to-do', 'pending'].includes(normalized)) {
+        return 'pending';
+    }
+
+    return 'processing';
+}
+
+function emitBoardSummary(lists) {
+    const summary = {
+        pending: 0,
+        processing: 0,
+        completed: 0,
+        cancelled: 0
+    };
+
+    let total = 0;
+    (lists || []).forEach((list) => {
+        const cards = list.cards || [];
+        if (!cards.length) {
+            return;
+        }
+
+        const mappedStatus = mapListNameToDashboardStatus(list.name);
+        summary[mappedStatus] += cards.length;
+        total += cards.length;
+    });
+
+    const percentages = Object.fromEntries(
+        Object.entries(summary).map(([status, count]) => {
+            const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+            return [status, pct];
+        })
+    );
+
+    if (window.parent && window.parent !== window) {
+        window.parent.postMessage({
+            type: 'trello:board-summary',
+            payload: {
+                boardId: currentBoardId,
+                boardName: (allBoards.find(b => b.id === currentBoardId) || {}).name || '',
+                total,
+                counts: summary,
+                percentages
+            }
+        }, '*');
+    }
+}
+
+function refreshBoardViewsWithFilters() {
+    if (!currentBoardLists.length) {
+        return;
+    }
+    const filteredLists = getFilteredLists(currentBoardLists);
+    loadTableView(filteredLists);
+    loadKanbanView(filteredLists, currentBoardId);
+    loadCalendarView(filteredLists);
+    emitBoardSummary(filteredLists);
+}
+
+function initializeFilterMenus(lists) {
+    const statusMenu = document.querySelector('#statusFilterMenu');
+    const assigneeMenu = document.querySelector('#assigneeFilterMenu');
+    const projectMenu = document.querySelector('#projectFilterMenu');
+
+    if (!statusMenu || !assigneeMenu || !projectMenu) {
+        return;
+    }
+
+    const statuses = new Set();
+    const assignees = new Set();
+    const projects = new Set();
+
+    (lists || []).forEach(list => {
+        statuses.add(slugifyFilterValue(list.name));
+        (list.cards || []).forEach(card => {
+            extractAssigneeNamesFromCard(card).forEach(name => assignees.add(slugifyFilterValue(name)));
+            projects.add(extractProjectNameFromCard({ ...card, listName: list.name }));
+        });
+    });
+
+    const statusItems = Array.from(statuses).filter(Boolean).sort();
+    const assigneeItems = Array.from(assignees).filter(Boolean).sort();
+    const projectItems = Array.from(projects).filter(Boolean).sort();
+
+    statusMenu.innerHTML = '<li><button class="dropdown-item active" type="button" data-filter-type="status" data-filter-value="all">All statuses</button></li>' +
+        statusItems.map(value => `<li><button class="dropdown-item" type="button" data-filter-type="status" data-filter-value="${value}">${value.replace(/-/g, ' ')}</button></li>`).join('');
+
+    assigneeMenu.innerHTML = '<li><button class="dropdown-item active" type="button" data-filter-type="assignee" data-filter-value="all">All assignees</button></li>' +
+        assigneeItems.map(value => `<li><button class="dropdown-item" type="button" data-filter-type="assignee" data-filter-value="${value}">${value.replace(/-/g, ' ')}</button></li>`).join('');
+
+    projectMenu.innerHTML = '<li><button class="dropdown-item active" type="button" data-filter-type="project" data-filter-value="all">All projects</button></li>' +
+        projectItems.map(value => `<li><button class="dropdown-item" type="button" data-filter-type="project" data-filter-value="${value}">${value.replace(/-/g, ' ')}</button></li>`).join('');
+
+    updateFilterButtonLabels();
+}
+
+function setFilterValue(type, value) {
+    if (!Object.prototype.hasOwnProperty.call(activeTaskFilters, type)) {
+        return;
+    }
+    activeTaskFilters[type] = value;
+
+    const menu = document.querySelector(`#${type}FilterMenu`);
+    if (menu) {
+        menu.querySelectorAll('.dropdown-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.filterValue === value);
+        });
+    }
+
+    updateFilterButtonLabels();
+    refreshBoardViewsWithFilters();
+    emitHciInteraction('filter_changed', {
+        type,
+        value,
+        activeFilters: { ...activeTaskFilters }
+    });
+}
+
+function resetAllFilters() {
+    setFilterValue('status', 'all');
+    setFilterValue('assignee', 'all');
+    setFilterValue('project', 'all');
+    setFilterValue('due', 'all');
+    emitHciInteraction('filters_cleared', {
+        activeFilters: { ...activeTaskFilters }
+    });
+}
+
+function setupFilterControls() {
+    const filtersSection = document.querySelector('#filtersSection');
+    if (!filtersSection || filtersSection.dataset.bound === 'true') {
+        return;
+    }
+    filtersSection.dataset.bound = 'true';
+
+    filtersSection.addEventListener('click', (event) => {
+        const item = event.target.closest('.dropdown-item[data-filter-type][data-filter-value]');
+        if (!item) return;
+        setFilterValue(item.dataset.filterType, item.dataset.filterValue);
+    });
+
+    const clearBtn = document.querySelector('#clearFiltersBtn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', resetAllFilters);
+    }
+
+    updateFilterButtonLabels();
+}
 
 function activateTab(tabId) {
     const tabButton = document.querySelector(`#${tabId}`);
@@ -173,17 +452,66 @@ function getChecklistCheckedByMap() {
 }
 
 function getChecklistCheckedBy(cardId, itemId) {
-    const map = getChecklistCheckedByMap();
-    return map?.[cardId]?.[itemId] || '';
+    const info = getChecklistCheckedByInfo(cardId, itemId);
+    return info ? info.name : '';
 }
 
-function setChecklistCheckedBy(cardId, itemId, checkedByName) {
+function getChecklistCheckedByInfo(cardId, itemId) {
+    const map = getChecklistCheckedByMap();
+    const raw = map?.[cardId]?.[itemId];
+    if (!raw) {
+        return null;
+    }
+
+    if (typeof raw === 'string') {
+        return { name: raw, checkedAt: '' };
+    }
+
+    if (typeof raw === 'object') {
+        return {
+            name: raw.name || '',
+            checkedAt: raw.checkedAt || ''
+        };
+    }
+
+    return null;
+}
+
+function setChecklistCheckedBy(cardId, itemId, checkedByName, checkedAt) {
     const map = getChecklistCheckedByMap();
     if (!map[cardId]) {
         map[cardId] = {};
     }
-    map[cardId][itemId] = checkedByName;
+    map[cardId][itemId] = {
+        name: checkedByName,
+        checkedAt: checkedAt || new Date().toISOString()
+    };
     localStorage.setItem(CHECKED_BY_STORAGE_KEY, JSON.stringify(map));
+}
+
+function formatCheckedByText(info) {
+    if (!info || !info.name) {
+        return '';
+    }
+
+    if (!info.checkedAt) {
+        return `Checked by: ${info.name}`;
+    }
+
+    const checkedAt = new Date(info.checkedAt);
+    if (Number.isNaN(checkedAt.getTime())) {
+        return `Checked by: ${info.name}`;
+    }
+
+    const timestamp = checkedAt.toLocaleString('en-US', {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    return `Checked by: ${info.name} · ${timestamp}`;
 }
 
 function clearChecklistCheckedBy(cardId, itemId) {
@@ -668,10 +996,9 @@ async function selectBoard(boardId, boardName) {
         
         console.log('All cards loaded and attached to lists');
         
-        // Load all views
-        loadTableView(lists);
-        loadKanbanView(lists, boardId);
-        loadCalendarView(lists);
+        currentBoardLists = lists.map(list => ({ ...list, cards: [...(list.cards || [])] }));
+        initializeFilterMenus(currentBoardLists);
+        refreshBoardViewsWithFilters();
     } catch (error) {
         console.error('Error loading board:', error);
     }
@@ -752,9 +1079,9 @@ async function loadTableView(lists) {
             }
             
             tableHTML += `
-                <tr onclick="showCardDetails('${card.id}')">
+                <tr class="clickable-row" onclick="showCardDetails('${card.id}')" title="Click to view task details">
                     <td>
-                        <input type="checkbox" class="form-check-input">
+                        <input type="checkbox" class="form-check-input" onclick="event.stopPropagation()">
                     </td>
                     <td><strong>${escapeHtml(card.name)}</strong></td>
                     <td>${escapeHtml(card.listName)}</td>
@@ -1223,6 +1550,214 @@ function isSameCalendarDay(date, day, month, year) {
 // Calendar View Functions
 let currentCalendarDate = new Date();
 let calendarCards = [];
+let currentCalendarNoteDate = '';
+let currentCalendarEditingNoteId = '';
+const CALENDAR_NOTES_STORAGE_KEY = 'calendarPersonalNotes';
+
+function getCalendarNotes() {
+    try {
+        const notes = JSON.parse(localStorage.getItem(CALENDAR_NOTES_STORAGE_KEY) || '[]');
+        return Array.isArray(notes) ? notes : [];
+    } catch (error) {
+        console.warn('Failed to read calendar notes:', error);
+        return [];
+    }
+}
+
+function saveCalendarNotes(notes) {
+    localStorage.setItem(CALENDAR_NOTES_STORAGE_KEY, JSON.stringify(notes));
+}
+
+function normalizeCalendarDateString(dateValue) {
+    if (!dateValue) return '';
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function getCalendarNotesForDay(year, month, day) {
+    return getCalendarNotes().filter((note) => {
+        const noteDate = new Date(note.date);
+        return !Number.isNaN(noteDate.getTime()) &&
+            noteDate.getFullYear() === year &&
+            noteDate.getMonth() === month &&
+            noteDate.getDate() === day;
+    });
+}
+
+function getCalendarNoteModalElements() {
+    return {
+        modal: document.querySelector('#calendarNoteModal'),
+        dateLabel: document.querySelector('#calendarNoteModalDateLabel'),
+        noteDateInput: document.querySelector('#calendarNoteDate'),
+        noteTextInput: document.querySelector('#calendarNoteText'),
+        addButton: document.querySelector('#addCalendarNoteBtn'),
+        notesCount: document.querySelector('#calendarNotesCount'),
+        notesList: document.querySelector('#calendarNotesList')
+    };
+}
+
+function renderCalendarNoteModal() {
+    const elements = getCalendarNoteModalElements();
+    if (!elements.modal || !elements.notesList || !elements.notesCount) {
+        return;
+    }
+
+    const selectedDate = currentCalendarNoteDate || normalizeCalendarDateString(currentCalendarDate.toISOString());
+    const selectedDateObject = selectedDate ? new Date(`${selectedDate}T00:00:00`) : null;
+    const notes = getCalendarNotes().filter((note) => note.date === selectedDate).sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
+
+    if (elements.dateLabel) {
+        elements.dateLabel.textContent = selectedDateObject && !Number.isNaN(selectedDateObject.getTime())
+            ? selectedDateObject.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: '2-digit', year: 'numeric' })
+            : 'Select a date';
+    }
+
+    if (elements.noteDateInput) {
+        elements.noteDateInput.value = selectedDate || '';
+    }
+
+    if (elements.noteTextInput) {
+        const notes = getCalendarNotes();
+        const editingNote = currentCalendarEditingNoteId
+            ? notes.find((note) => note.id === currentCalendarEditingNoteId)
+            : null;
+        elements.noteTextInput.value = editingNote ? (editingNote.text || '') : '';
+        if (elements.addButton) {
+            elements.addButton.innerHTML = editingNote
+                ? '<i class="bi bi-check-lg me-1"></i> Save'
+                : '<i class="bi bi-plus-lg me-1"></i> Add';
+        }
+    }
+
+    elements.notesCount.textContent = `${notes.length} note${notes.length === 1 ? '' : 's'}`;
+
+    if (!notes.length) {
+        elements.notesList.innerHTML = '<div class="text-muted small">No notes for this date yet.</div>';
+        return;
+    }
+
+    elements.notesList.innerHTML = notes.map((note) => {
+        const createdAt = note.createdAt ? new Date(note.createdAt) : null;
+        const createdLabel = createdAt && !Number.isNaN(createdAt.getTime())
+            ? createdAt.toLocaleString('en-US', {
+                month: 'short',
+                day: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            })
+            : 'Saved';
+
+        return `
+            <div class="calendar-note-item" data-note-id="${escapeHtml(note.id)}">
+                <div class="calendar-note-meta">
+                    <strong>${escapeHtml(createdLabel)}</strong>
+                    <div class="d-flex gap-2 align-items-center">
+                        <button type="button" class="btn btn-sm btn-link text-primary p-0 calendar-note-edit" data-note-id="${escapeHtml(note.id)}">Edit</button>
+                        <button type="button" class="btn btn-sm btn-link text-danger p-0 calendar-note-delete" data-note-id="${escapeHtml(note.id)}">Delete</button>
+                    </div>
+                </div>
+                <div class="calendar-note-text">${escapeHtml(note.text)}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function beginCalendarNoteEdit(noteId) {
+    const note = getCalendarNotes().find((item) => item.id === noteId);
+    if (!note) return;
+
+    currentCalendarNoteDate = normalizeCalendarDateString(note.date || currentCalendarDate.toISOString());
+    currentCalendarEditingNoteId = noteId;
+    renderCalendarNoteModal();
+
+    emitHciInteraction('calendar_note_edit_opened', {
+        noteId,
+        date: currentCalendarNoteDate
+    });
+}
+
+function resetCalendarNoteEditorState() {
+    currentCalendarEditingNoteId = '';
+}
+
+function addCalendarNote() {
+    const noteDateInput = document.querySelector('#calendarNoteDate');
+    const noteTextInput = document.querySelector('#calendarNoteText');
+    if (!noteDateInput || !noteTextInput) return;
+
+    const dateValue = normalizeCalendarDateString(noteDateInput.value || currentCalendarDate.toISOString());
+    const noteText = String(noteTextInput.value || '').trim();
+    if (!dateValue || !noteText) {
+        return;
+    }
+
+    const notes = getCalendarNotes();
+    const now = new Date().toISOString();
+
+    if (currentCalendarEditingNoteId) {
+        const index = notes.findIndex((note) => note.id === currentCalendarEditingNoteId);
+        if (index !== -1) {
+            notes[index] = {
+                ...notes[index],
+                date: dateValue,
+                text: noteText,
+                updatedAt: now
+            };
+        }
+    } else {
+        notes.unshift({
+            id: `note_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            date: dateValue,
+            text: noteText,
+            createdAt: now,
+            updatedAt: now
+        });
+    }
+    saveCalendarNotes(notes);
+    noteTextInput.value = '';
+    currentCalendarNoteDate = dateValue;
+    const wasEditing = Boolean(currentCalendarEditingNoteId);
+    const savedNoteId = currentCalendarEditingNoteId;
+    currentCalendarEditingNoteId = '';
+    renderCalendar();
+    renderCalendarNoteModal();
+    emitHciInteraction(wasEditing ? 'calendar_note_updated' : 'calendar_note_added', {
+        noteId: savedNoteId || undefined,
+        date: dateValue,
+        textPreview: noteText.slice(0, 80)
+    });
+}
+
+function deleteCalendarNote(noteId) {
+    const notes = getCalendarNotes().filter((note) => note.id !== noteId);
+    saveCalendarNotes(notes);
+    if (currentCalendarEditingNoteId === noteId) {
+        currentCalendarEditingNoteId = '';
+    }
+    renderCalendar();
+    renderCalendarNoteModal();
+    emitHciInteraction('calendar_note_deleted', { noteId });
+}
+
+function openCalendarNoteEditor(dateValue) {
+    currentCalendarNoteDate = normalizeCalendarDateString(dateValue || currentCalendarDate.toISOString());
+    currentCalendarEditingNoteId = '';
+    renderCalendarNoteModal();
+
+    const elements = getCalendarNoteModalElements();
+    if (elements.modal) {
+        bootstrap.Modal.getOrCreateInstance(elements.modal).show();
+    }
+
+    emitHciInteraction('calendar_note_editor_opened', {
+        date: currentCalendarNoteDate
+    });
+}
 
 function loadCalendarView(lists) {
     calendarCards = [];
@@ -1297,12 +1832,16 @@ function renderCalendar() {
                 }
             }
         });
+
+        const notesOnDay = getCalendarNotesForDay(year, month, day);
         
+        const dayKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         let dayClass = 'calendar-day';
         if (isToday) dayClass += ' today';
         if (tasksOnDay.length > 0) dayClass += ' has-tasks';
+        if (notesOnDay.length > 0) dayClass += ' has-notes';
         
-        calendarHTML += `<div class="${dayClass}">`;
+        calendarHTML += `<div class="${dayClass}" data-calendar-date="${dayKey}" onclick="openCalendarNoteEditor('${dayKey}')" title="Click to add or edit notes">`;
         calendarHTML += `<div class="day-number">${day}</div>`;
         
         if (tasksOnDay.length > 0) {
@@ -1316,13 +1855,24 @@ function renderCalendar() {
                 const taskTypeLabel = task.type === 'created' ? 'Created' : 'Deadline';
                 calendarHTML += `
                     <div class="calendar-task ${isOverdue ? 'overdue' : ''}" 
-                         onclick="showCardDetails('${card.id}')" 
+                         onclick="event.stopPropagation(); showCardDetails('${card.id}')" 
                          title="${taskTypeLabel}: ${escapeHtml(card.name)}">
                         <span class="task-dot" style="background-color: ${getColorForList(card.listName)}"></span>
                         <span class="task-name">${taskPrefix} ${escapeHtml(card.name.substring(0, 26))}${card.name.length > 26 ? '...' : ''}</span>
                     </div>
                 `;
             });
+            calendarHTML += '</div>';
+        }
+
+        if (notesOnDay.length > 0) {
+            calendarHTML += '<div class="day-notes">';
+            notesOnDay.slice(0, 2).forEach((note) => {
+                calendarHTML += `<div class="calendar-note-pill" title="${escapeHtml(note.text)}">📝 ${escapeHtml(note.text.substring(0, 18))}${note.text.length > 18 ? '...' : ''}</div>`;
+            });
+            if (notesOnDay.length > 2) {
+                calendarHTML += `<div class="calendar-note-pill more">+${notesOnDay.length - 2} more</div>`;
+            }
             calendarHTML += '</div>';
         }
         
@@ -1367,8 +1917,46 @@ function escapeJsString(text) {
 
 // Initialize application
 document.addEventListener('DOMContentLoaded', async () => {
+    if (window.parent && window.parent !== window) {
+        document.body.classList.add('embedded-mode');
+        window.parent.postMessage({
+            type: 'hci:interaction',
+            detail: {
+                action: 'trello_embed_ready',
+                source: 'trello-task',
+                timestamp: new Date().toISOString(),
+                payload: { view: EMBED_VIEW_MODE }
+            }
+        }, '*');
+    }
+
     applyEmbedViewMode();
+    const addCalendarNoteBtn = document.querySelector('#addCalendarNoteBtn');
+    const calendarNotesList = document.querySelector('#calendarNotesList');
+    if (addCalendarNoteBtn) {
+        addCalendarNoteBtn.addEventListener('click', addCalendarNote);
+    }
+    const calendarNoteModal = document.querySelector('#calendarNoteModal');
+    if (calendarNoteModal) {
+        calendarNoteModal.addEventListener('hidden.bs.modal', () => {
+            resetCalendarNoteEditorState();
+            renderCalendarNoteModal();
+        });
+    }
+    if (calendarNotesList) {
+        calendarNotesList.addEventListener('click', (event) => {
+            const editBtn = event.target.closest('.calendar-note-edit');
+            if (editBtn) {
+                beginCalendarNoteEdit(editBtn.dataset.noteId);
+                return;
+            }
+            const deleteBtn = event.target.closest('.calendar-note-delete');
+            if (!deleteBtn) return;
+            deleteCalendarNote(deleteBtn.dataset.noteId);
+        });
+    }
     initializeEmployeeAccessMode();
+    setupFilterControls();
     const initialized = await initializeTrello();
     if (initialized) {
         loadWorkspaces();
@@ -2817,9 +3405,10 @@ async function showCardDetails(cardId) {
                     const canEditChecklistItem = canCurrentEmployeeEditChecklistItem(item.name);
                     const disabled = canEditChecklistItem ? '' : 'disabled';
                     const permissionHint = canEditChecklistItem ? '' : 'title="You can only update steps assigned to you"';
-                    const checkedByName = getChecklistCheckedBy(card.id, item.id);
-                    const checkedByHTML = (item.state === 'complete' && checkedByName)
-                        ? `Checked by: ${escapeHtml(checkedByName)}`
+                    const checkedByInfo = getChecklistCheckedByInfo(card.id, item.id);
+                    const checkedByText = formatCheckedByText(checkedByInfo);
+                    const checkedByHTML = (item.state === 'complete' && checkedByText)
+                        ? escapeHtml(checkedByText)
                         : '';
                     checklistHTML += `
                         <div class="form-check mb-1">
@@ -3257,7 +3846,9 @@ async function updateChecklistItem(cardId, checkItemId, isComplete) {
         }
 
         if (checkedByElement) {
-            checkedByElement.textContent = isComplete ? `Checked by: ${getCurrentOperatorName()}` : '';
+            checkedByElement.textContent = isComplete
+                ? formatCheckedByText({ name: getCurrentOperatorName(), checkedAt: new Date().toISOString() })
+                : '';
         }
         
         // Update progress immediately from actual checkbox states
@@ -3493,18 +4084,158 @@ function toggleProgressionTab() {
     }
 }
 
+function getNextChecklistStepId() {
+    const stepNumbers = Array.from(document.querySelectorAll('#checklistContainer .checklist-item input[type="checkbox"]'))
+        .map((checkbox) => {
+            const match = String(checkbox.id || '').match(/step(\d+)/i);
+            return match ? Number(match[1]) : 0;
+        })
+        .filter((value) => Number.isFinite(value) && value > 0);
+
+    const nextStepNumber = stepNumbers.length > 0 ? Math.max(...stepNumbers) + 1 : 1;
+    return `step${nextStepNumber}`;
+}
+
+function getChecklistStepOrder() {
+    const container = document.querySelector('#checklistContainer');
+    if (!container) return [];
+
+    return Array.from(container.querySelectorAll('.checklist-item'))
+        .map((item) => item.querySelector('input[type="checkbox"]')?.id)
+        .filter(Boolean);
+}
+
+function refreshChecklistDragBindings() {
+    document.querySelectorAll('#checklistContainer .checklist-item').forEach((item) => {
+        item.draggable = true;
+        item.ondragstart = handleChecklistDragStart;
+        item.ondragover = handleChecklistDragOver;
+        item.ondrop = handleChecklistDrop;
+        item.ondragend = handleChecklistDragEnd;
+
+        const dragHandle = item.querySelector('.checklist-drag-handle');
+        if (dragHandle) {
+            dragHandle.draggable = true;
+            dragHandle.ondragstart = handleChecklistDragStart;
+            dragHandle.ondragend = handleChecklistDragEnd;
+            dragHandle.onmousedown = (event) => event.preventDefault();
+        }
+    });
+}
+
+function applyChecklistStepOrder(stepOrder) {
+    const container = document.querySelector('#checklistContainer');
+    if (!container || !Array.isArray(stepOrder) || !stepOrder.length) {
+        return;
+    }
+
+    const currentItems = Array.from(container.querySelectorAll('.checklist-item'));
+    const itemMap = new Map(currentItems.map((item) => [item.querySelector('input[type="checkbox"]')?.id, item]));
+
+    stepOrder.forEach((stepId) => {
+        const item = itemMap.get(stepId);
+        if (item) {
+            container.appendChild(item);
+            itemMap.delete(stepId);
+        }
+    });
+
+    itemMap.forEach((item) => container.appendChild(item));
+}
+
+function resetChecklistDragState() {
+    currentChecklistDragItem = null;
+    document.querySelectorAll('#checklistContainer .checklist-item').forEach((item) => {
+        item.classList.remove('dragging', 'drag-over');
+        const dragHandle = item.querySelector('.checklist-drag-handle');
+        if (dragHandle) {
+            dragHandle.classList.remove('dragging');
+        }
+    });
+}
+
+function handleChecklistDragStart(event) {
+    const sourceElement = event.currentTarget || event.target;
+    const item = sourceElement.classList?.contains('checklist-item')
+        ? sourceElement
+        : sourceElement.closest?.('.checklist-item') || event.target.closest('.checklist-item');
+    if (!item || !event.dataTransfer) {
+        return;
+    }
+
+    currentChecklistDragItem = item;
+    item.classList.add('dragging');
+    const dragHandle = item.querySelector('.checklist-drag-handle');
+    if (dragHandle) {
+        dragHandle.classList.add('dragging');
+    }
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', item.querySelector('input[type="checkbox"]')?.id || '');
+}
+
+function handleChecklistDragOver(event) {
+    if (!currentChecklistDragItem) {
+        return;
+    }
+
+    const targetItem = event.currentTarget?.classList?.contains('checklist-item')
+        ? event.currentTarget
+        : event.target.closest('.checklist-item');
+    if (!targetItem) {
+        event.preventDefault();
+        return;
+    }
+
+    if (targetItem === currentChecklistDragItem) {
+        return;
+    }
+
+    event.preventDefault();
+    const bounds = targetItem.getBoundingClientRect();
+    const insertAfter = event.clientY > bounds.top + (bounds.height / 2);
+
+    document.querySelectorAll('#checklistContainer .checklist-item').forEach((item) => {
+        item.classList.remove('drag-over');
+    });
+
+    targetItem.classList.add('drag-over');
+    if (insertAfter) {
+        targetItem.after(currentChecklistDragItem);
+    } else {
+        targetItem.before(currentChecklistDragItem);
+    }
+}
+
+function handleChecklistDrop(event) {
+    if (!currentChecklistDragItem) {
+        return;
+    }
+
+    event.preventDefault();
+    resetChecklistDragState();
+    updateProgressionStatus();
+    saveProgressionData();
+}
+
+function handleChecklistDragEnd() {
+    resetChecklistDragState();
+}
+
 function addChecklistItem() {
     const container = document.querySelector('#checklistContainer');
     if (!container) return;
     
-    const itemCount = container.querySelectorAll('.checklist-item').length + 1;
-    const stepId = `step${itemCount}`;
+    const stepId = getNextChecklistStepId();
     
     const newItem = document.createElement('div');
     newItem.className = 'card mb-2 border-0 bg-light checklist-item';
+    newItem.draggable = true;
     newItem.innerHTML = `
         <div class="card-body p-2">
             <div class="d-flex align-items-start gap-2">
+                <button type="button" class="btn btn-sm btn-light checklist-drag-handle" draggable="true" title="Drag to reorder" aria-label="Drag to reorder step">
+                    <i class="bi bi-grip-vertical"></i>
+                </button>
                 <div class="form-check mt-1">
                     <input class="form-check-input" type="checkbox" id="${stepId}" onchange="updateProgressionStatus()">
                 </div>
@@ -3526,6 +4257,7 @@ function addChecklistItem() {
     `;
     
     container.appendChild(newItem);
+    refreshChecklistDragBindings();
     updateProgressionStatus();
     saveProgressionData();
 }
@@ -3533,9 +4265,13 @@ function addChecklistItem() {
 function buildChecklistStepElement(stepId, titleText) {
     const newItem = document.createElement('div');
     newItem.className = 'card mb-2 border-0 bg-light checklist-item';
+    newItem.draggable = true;
     newItem.innerHTML = `
         <div class="card-body p-2">
             <div class="d-flex align-items-start gap-2">
+                <button type="button" class="btn btn-sm btn-light checklist-drag-handle" draggable="true" title="Drag to reorder" aria-label="Drag to reorder step">
+                    <i class="bi bi-grip-vertical"></i>
+                </button>
                 <div class="form-check mt-1">
                     <input class="form-check-input" type="checkbox" id="${stepId}" onchange="updateProgressionStatus()">
                 </div>
@@ -3571,6 +4307,8 @@ function replaceChecklistSteps(stepNames) {
         const stepId = `step${index + 1}`;
         container.appendChild(buildChecklistStepElement(stepId, name));
     });
+
+    refreshChecklistDragBindings();
 
     localStorage.setItem('stepAssignments', JSON.stringify({}));
     updateProgressionStatus();
@@ -3974,29 +4712,44 @@ function updateProgressionSummary(completed, total, percentage) {
 
 // Save progression data to localStorage
 function saveProgressionData() {
-    const steps = ['step1', 'step2', 'step3', 'step4', 'step5'];
+    const container = document.querySelector('#checklistContainer');
+    const steps = container ? Array.from(container.querySelectorAll('.checklist-item')) : [];
     const progressData = {};
-    
-    steps.forEach(step => {
-        const checkbox = document.querySelector(`#${step}`);
+
+    progressData.order = steps.map((step) => step.querySelector('input[type="checkbox"]')?.id).filter(Boolean);
+
+    steps.forEach((step) => {
+        const checkbox = step.querySelector('input[type="checkbox"]');
         if (checkbox) {
-            progressData[step] = checkbox.checked;
+            progressData[checkbox.id] = checkbox.checked;
         }
     });
     
-    localStorage.setItem('orderProgress', JSON.stringify(progressData));
+    localStorage.setItem(PROGRESSION_ORDER_STORAGE_KEY, JSON.stringify(progressData));
 }
 
 // Load progression data from localStorage
 function loadProgressionData() {
-    const progressData = localStorage.getItem('orderProgress');
+    const progressData = localStorage.getItem(PROGRESSION_ORDER_STORAGE_KEY);
     if (progressData) {
         try {
             const data = JSON.parse(progressData);
-            Object.keys(data).forEach(step => {
+            const stepStates = data.steps && typeof data.steps === 'object' ? data.steps : data;
+
+            if (Array.isArray(data.order)) {
+                applyChecklistStepOrder(data.order);
+            }
+
+            refreshChecklistDragBindings();
+
+            Object.keys(stepStates).forEach(step => {
+                if (step === 'order' || step === 'steps') {
+                    return;
+                }
+
                 const checkbox = document.querySelector(`#${step}`);
                 if (checkbox) {
-                    checkbox.checked = data[step];
+                    checkbox.checked = stepStates[step];
                 }
             });
             updateProgressionStatus();
@@ -4008,9 +4761,8 @@ function loadProgressionData() {
 
 // Reset progression checklist
 function resetProgressionChecklist() {
-    const steps = ['step1', 'step2', 'step3', 'step4', 'step5'];
-    steps.forEach(step => {
-        const checkbox = document.querySelector(`#${step}`);
+    const steps = document.querySelectorAll('#checklistContainer .checklist-item input[type="checkbox"]');
+    steps.forEach((checkbox) => {
         if (checkbox) {
             checkbox.checked = false;
         }
@@ -4023,6 +4775,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const listSelect = document.querySelector('#listSelect');
     if (listSelect) {
         listSelect.addEventListener('change', showOrderProgressSection);
+    }
+
+    const checklistContainer = document.querySelector('#checklistContainer');
+    if (checklistContainer) {
+        refreshChecklistDragBindings();
     }
     
     // Load progression data when modal is shown

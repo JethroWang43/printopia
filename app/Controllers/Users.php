@@ -15,7 +15,8 @@ class Users extends BaseController {
         return view('include\head_view', $data)
             .view('include\nav_view')
             .view('userslist_view', $data)
-            .view('include\foot_view');
+            .view('include\foot_view')
+            .view('include\close_view');
     }
 
     public function add() {
@@ -27,7 +28,8 @@ class Users extends BaseController {
         return view('include\head_view', $data)
             .view('include\nav_view')
             .view('adduser_view')
-            .view('include\foot_view');
+            .view('include\foot_view')
+            .view('include\close_view');
     }
 
     public function insert() {
@@ -80,7 +82,8 @@ class Users extends BaseController {
         return view('include\head_view', $data)
             .view('include\nav_view')
             .view('viewuser_view', $data)
-            .view('include\foot_view');
+            .view('include\foot_view')
+            .view('include\close_view');
     }
 
     public function edit($id) {
@@ -95,7 +98,8 @@ class Users extends BaseController {
         return view('include\head_view', $data)
             .view('include\nav_view')
             .view('updateuser_view', $data)
-            .view('include\foot_view');
+            .view('include\foot_view')
+            .view('include\close_view');
     }
 
     public function update($id) {

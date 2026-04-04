@@ -169,28 +169,6 @@
             display: block;
         }
 
-        .user-role {
-            width: 100%;
-            border: 0;
-            border-bottom: 1px solid #eef2f8;
-            background: #ffffff;
-            color: #192f68;
-            text-align: left;
-            padding: 10px 12px;
-            font: inherit;
-            font-size: 0.84rem;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .user-role:last-child {
-            border-bottom: 0;
-        }
-
-        .user-role:hover {
-            background: #f5f8ff;
-        }
-
         .hero {
             position: relative;
             min-height: clamp(440px, calc(100vh - 78px), 760px);
@@ -593,34 +571,7 @@
     </style>
 </head>
 <body>
-    <header class="topbar">
-        <div class="container topbar-inner">
-            <a class="logo" href="<?= base_url(); ?>">
-                <span class="logo-mark">P</span>
-                <span>Printopia</span>
-            </a>
-
-            <nav class="main-nav" aria-label="Main navigation">
-                <a href="<?= base_url(); ?>" class="active">Home</a>
-                <a href="<?= base_url('products'); ?>">Products</a>
-                <a href="<?= base_url('how-it-works'); ?>">How it works</a>
-                <a href="<?= base_url('contact'); ?>">Contact Us</a>
-            </nav>
-
-            <div class="user-menu" aria-label="Role menu">
-                <button type="button" class="user-chip-btn" aria-haspopup="true" aria-expanded="false">
-                    <span>◎</span>
-                    <span>Sample User</span>
-                    <span>▾</span>
-                </button>
-                <div class="user-dropdown" role="menu" aria-label="Select role">
-                    <button type="button" class="user-role" role="menuitem">User</button>
-                    <a class="user-role" role="menuitem" href="<?= base_url('admin'); ?>">Admin</a>
-                    <a class="user-role" role="menuitem" href="<?= base_url('employee'); ?>">Employee</a>
-                </div>
-            </div>
-        </div>
-    </header>
+    <?= view('include/nav_view', ['activePage' => 'home']); ?>
 
     <section class="hero" id="main-content">
         <div class="hero-card">
@@ -706,50 +657,9 @@
         <a href="<?= base_url('contact'); ?>" aria-label="Chat">💬</a>
     </aside>
 
-    <footer class="site-footer" id="contact">
-        <div class="container">
-            <div class="footer-grid">
-                <section>
-                    <div class="footer-logo">
-                        <span class="logo-mark">P</span>
-                        <span>Printopia</span>
-                    </div>
-                    <p>Your premier partner for custom print solutions. Our customer portal gives real-time visibility to production workflow and seamless order management.</p>
-                </section>
-
-                <section>
-                    <h5>Quick Links</h5>
-                    <ul>
-                        <li><a href="<?= base_url(); ?>">Home</a></li>
-                        <li><a href="<?= base_url('products'); ?>">Products</a></li>
-                        <li><a href="<?= base_url('how-it-works'); ?>">How it works</a></li>
-                        <li><a href="<?= base_url('contact'); ?>">Contact Us</a></li>
-                    </ul>
-                </section>
-
-                <section>
-                    <h5>Services</h5>
-                    <ul>
-                        <li>Custom 3D model design</li>
-                        <li>Design consultation</li>
-                        <li>Quality assurance</li>
-                        <li>Timely delivery</li>
-                    </ul>
-                </section>
-
-                <section>
-                    <h5>Contact Information</h5>
-                    <ul>
-                        <li>0623-7676881</li>
-                        <li>Executive35@printcl.com</li>
-                        <li>Tanauan, Batangas</li>
-                    </ul>
-                </section>
-            </div>
-
-            <div class="footer-bottom">© 2026 Printopia. All rights reserved.</div>
-        </div>
-    </footer>
+    <?= view('include/foot_view'); ?>
     <script src="<?= base_url('hci-assist.js'); ?>"></script>
 </body>
 </html>
+
+

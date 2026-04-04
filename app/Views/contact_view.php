@@ -11,22 +11,15 @@
         :root {
             --brand-gold: #e7a821;
             --brand-navy: #10224f;
-            --text: #1f2430;
-            --muted: #5d6478;
-            --surface: #eef1f7;
             --surface-white: #ffffff;
-            --danger: #b32319;
-            --line: #d9e1f1;
-            --shadow-soft: 0 14px 30px rgba(16, 34, 79, 0.12);
+            --text: #1f2430;
+            --muted: #596074;
+            --line: #dbe3ef;
+            --shadow-soft: 0 10px 22px rgba(16, 34, 79, 0.12);
         }
 
         * {
             box-sizing: border-box;
-        }
-
-        html,
-        body {
-            min-height: 100%;
         }
 
         body {
@@ -166,28 +159,6 @@
         .user-menu:hover .user-dropdown,
         .user-menu:focus-within .user-dropdown {
             display: block;
-        }
-
-        .user-role {
-            width: 100%;
-            border: 0;
-            border-bottom: 1px solid #eef2f8;
-            background: #ffffff;
-            color: #192f68;
-            text-align: left;
-            padding: 10px 12px;
-            font: inherit;
-            font-size: 0.84rem;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .user-role:last-child {
-            border-bottom: 0;
-        }
-
-        .user-role:hover {
-            background: #f5f8ff;
         }
 
         .hero {
@@ -508,34 +479,7 @@
     </style>
 </head>
 <body>
-    <header class="topbar">
-        <div class="container topbar-inner">
-            <a class="logo" href="<?= base_url(); ?>">
-                <span class="logo-mark">P</span>
-                <span>Printopia</span>
-            </a>
-
-            <nav class="main-nav" aria-label="Main navigation">
-                <a href="<?= base_url(); ?>">Home</a>
-                <a href="<?= base_url('products'); ?>">Products</a>
-                <a href="<?= base_url('how-it-works'); ?>">How it works</a>
-                <a href="<?= base_url('contact'); ?>" class="active">Contact Us</a>
-            </nav>
-
-            <div class="user-menu" aria-label="Role menu">
-                <button type="button" class="user-chip-btn" aria-haspopup="true" aria-expanded="false">
-                    <span>◎</span>
-                    <span>Sample User</span>
-                    <span>▾</span>
-                </button>
-                <div class="user-dropdown" role="menu" aria-label="Select role">
-                    <button type="button" class="user-role" role="menuitem">User</button>
-                    <a class="user-role" role="menuitem" href="<?= base_url('admin'); ?>">Admin</a>
-                    <a class="user-role" role="menuitem" href="<?= base_url('employee'); ?>">Employee</a>
-                </div>
-            </div>
-        </div>
-    </header>
+    <?= view('include/nav_view', ['activePage' => 'contact']); ?>
 
     <main id="main-content">
         <section class="hero">
@@ -634,50 +578,9 @@
         </section>
     </main>
 
-    <footer class="site-footer">
-        <div class="container">
-            <div class="footer-grid">
-                <section>
-                    <div class="footer-logo">
-                        <span class="logo-mark">P</span>
-                        <span>Printopia</span>
-                    </div>
-                    <p>Your partner for custom printing solutions with a clean and easy ordering workflow.</p>
-                </section>
-
-                <section>
-                    <h5>Quick Links</h5>
-                    <ul>
-                        <li><a href="<?= base_url(); ?>">Home</a></li>
-                        <li><a href="<?= base_url('products'); ?>">Products</a></li>
-                        <li><a href="<?= base_url('how-it-works'); ?>">How it works</a></li>
-                        <li><a href="<?= base_url('contact'); ?>">Contact Us</a></li>
-                    </ul>
-                </section>
-
-                <section>
-                    <h5>Services</h5>
-                    <ul>
-                        <li>Custom 3D model design</li>
-                        <li>Design consultation</li>
-                        <li>Quality assurance</li>
-                        <li>Trusted order handling</li>
-                    </ul>
-                </section>
-
-                <section>
-                    <h5>Contact Information</h5>
-                    <ul>
-                        <li>0922-4756841</li>
-                        <li>esensoweta61@gmail.com</li>
-                        <li>Tanauan, Batangas</li>
-                    </ul>
-                </section>
-            </div>
-
-            <div class="footer-bottom">&copy; 2026 Printopia. All rights reserved.</div>
-        </div>
-    </footer>
+    <?= view('include/foot_view'); ?>
     <script src="<?= base_url('hci-assist.js'); ?>"></script>
 </body>
 </html>
+
+

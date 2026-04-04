@@ -1,0 +1,834 @@
+<style>
+	.discount-tab {
+		background: #ffffff;
+		border: 1px solid #d5deed;
+		border-radius: 14px;
+		box-shadow: 0 12px 22px rgba(16, 34, 79, 0.08);
+		padding: clamp(16px, 2vw, 24px);
+	}
+
+	.discount-view {
+		display: none;
+	}
+
+	.discount-view.active {
+		display: block;
+	}
+
+	.discount-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 14px;
+		margin-bottom: 14px;
+	}
+
+	.discount-title {
+		margin: 0;
+		color: #132659;
+		font-size: clamp(1.4rem, 2.1vw, 2rem);
+		font-weight: 800;
+		letter-spacing: -0.01em;
+	}
+
+	.discount-primary-btn {
+		border: 1px solid #0f6838;
+		border-radius: 10px;
+		background: linear-gradient(180deg, #1f8f4f 0%, #15713d 100%);
+		color: #ffffff;
+		padding: 10px 16px;
+		font-family: inherit;
+		font-size: 0.9rem;
+		font-weight: 700;
+		cursor: pointer;
+		box-shadow: 0 8px 14px rgba(21, 113, 61, 0.2);
+	}
+
+	.discount-toolbar {
+		border: 1px solid #dce4f2;
+		border-radius: 10px;
+		background: #fbfdff;
+		padding: 10px;
+		display: grid;
+		grid-template-columns: minmax(220px, 1.3fr) minmax(150px, 1fr) minmax(120px, 0.9fr) auto;
+		gap: 10px;
+		margin-bottom: 12px;
+	}
+
+	.discount-field {
+		min-height: 40px;
+		border: 1px solid #ced8ea;
+		border-radius: 8px;
+		background: #ffffff;
+		color: #4f5b7d;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 0 12px;
+		font-size: 0.89rem;
+		font-weight: 600;
+	}
+
+	.discount-field input,
+	.discount-field select {
+		width: 100%;
+		border: 0;
+		outline: none;
+		background: transparent;
+		font: inherit;
+		color: #2f3e64;
+	}
+
+	.discount-field select {
+		cursor: pointer;
+	}
+
+	.discount-view-toggle {
+		justify-content: center;
+		min-width: 90px;
+		padding: 0;
+	}
+
+	.discount-view-toggle button {
+		border: 0;
+		background: transparent;
+		color: #4c597d;
+		font-family: inherit;
+		font-size: 0.83rem;
+		font-weight: 700;
+		height: 100%;
+		padding: 0 10px;
+		cursor: pointer;
+	}
+
+	.discount-view-toggle button.active {
+		background: #e9f4ff;
+		color: #1b5a96;
+	}
+
+	.discount-table-wrap {
+		border: 1px solid #cad8ee;
+		border-radius: 10px;
+		background: #ffffff;
+		overflow: hidden;
+	}
+
+	.discount-grid-wrap {
+		display: none;
+		margin-top: 12px;
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		gap: 10px;
+	}
+
+	.discount-grid-wrap.active {
+		display: grid;
+	}
+
+	.discount-grid-card {
+		border: 1px solid #d6e0f1;
+		border-radius: 10px;
+		padding: 12px;
+		background: #ffffff;
+	}
+
+	.discount-grid-card h5 {
+		margin: 0 0 8px;
+		color: #1e2f58;
+		font-size: 1rem;
+	}
+
+	.discount-grid-meta {
+		display: grid;
+		gap: 6px;
+		font-size: 0.84rem;
+		color: #5d6b8d;
+	}
+
+	.discount-table {
+		width: 100%;
+		border-collapse: collapse;
+	}
+
+	.discount-table thead tr {
+		background: #1788ce;
+		color: #ffffff;
+	}
+
+	.discount-table th,
+	.discount-table td {
+		text-align: left;
+		padding: 12px 14px;
+		white-space: nowrap;
+	}
+
+	.discount-table th {
+		font-size: 0.9rem;
+		font-weight: 700;
+	}
+
+	.discount-table td {
+		border-top: 1px solid #e9eef8;
+		font-size: 0.93rem;
+		color: #243150;
+	}
+
+	.discount-badge {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 999px;
+		padding: 4px 12px;
+		color: #ffffff;
+		font-size: 0.8rem;
+		font-weight: 700;
+		line-height: 1;
+	}
+
+	.discount-badge.active {
+		background: #0b84cf;
+	}
+
+	.discount-badge.ended {
+		background: #7f1d1d;
+	}
+
+	.discount-tag {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 999px;
+		padding: 4px 10px;
+		font-size: 0.78rem;
+		font-weight: 700;
+		color: #243150;
+		background: #edf3ff;
+	}
+
+	.discount-tag.specific {
+		background: #fff3da;
+		color: #815f11;
+	}
+
+	.discount-edit {
+		color: #41527a;
+		font-size: 1rem;
+		font-weight: 700;
+	}
+
+	.discount-pagination {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		gap: 12px;
+		padding-top: 14px;
+		color: #64708f;
+		font-size: 0.9rem;
+	}
+
+	.discount-pagination button {
+		border: 0;
+		background: transparent;
+		color: inherit;
+		font: inherit;
+		cursor: pointer;
+		padding: 0;
+	}
+
+	.discount-pagination button:disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
+	}
+
+	.discount-pagination .current {
+		width: 26px;
+		height: 26px;
+		border-radius: 6px;
+		background: #162b5e;
+		color: #fff;
+		display: inline-grid;
+		place-items: center;
+		font-weight: 700;
+	}
+
+	.discount-create-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) 300px;
+		gap: 14px;
+	}
+
+	.discount-card {
+		border: 1px solid #d8e1f1;
+		border-radius: 12px;
+		background: #ffffff;
+		padding: 14px;
+		margin-bottom: 12px;
+	}
+
+	.discount-card h4 {
+		margin: 0 0 10px;
+		color: #19316b;
+		font-size: 1rem;
+	}
+
+	.discount-segment {
+		display: inline-flex;
+		border: 1px solid #cdd7ea;
+		border-radius: 10px;
+		overflow: hidden;
+		background: #f8fbff;
+	}
+
+	.discount-segment button {
+		border: 0;
+		background: transparent;
+		color: #44547a;
+		padding: 9px 14px;
+		font-family: inherit;
+		font-size: 0.85rem;
+		font-weight: 700;
+		cursor: default;
+	}
+
+	.discount-segment button.active {
+		background: #1a88cf;
+		color: #ffffff;
+	}
+
+	.discount-form-row {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 10px;
+	}
+
+	.discount-field-block {
+		margin-top: 10px;
+	}
+
+	.discount-field-block label {
+		display: block;
+		margin-bottom: 6px;
+		color: #2e3c61;
+		font-size: 0.85rem;
+		font-weight: 700;
+	}
+
+	.discount-input,
+	.discount-select {
+		width: 100%;
+		min-height: 40px;
+		border: 1px solid #cfd8ea;
+		border-radius: 8px;
+		padding: 0 12px;
+		font-family: inherit;
+		font-size: 0.9rem;
+		color: #2d3a5d;
+		background: #ffffff;
+	}
+
+	.discount-help {
+		margin-top: 6px;
+		color: #6b7798;
+		font-size: 0.78rem;
+	}
+
+	.discount-inline {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.discount-percent {
+		font-size: 0.95rem;
+		font-weight: 700;
+		color: #44547a;
+	}
+
+	.discount-radio-group {
+		display: grid;
+		gap: 8px;
+		margin-top: 8px;
+	}
+
+	.discount-radio {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		color: #334266;
+		font-size: 0.88rem;
+	}
+
+	.discount-check-row {
+		display: grid;
+		gap: 8px;
+		margin-top: 8px;
+	}
+
+	.discount-check {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		color: #334266;
+		font-size: 0.88rem;
+	}
+
+	.discount-summary {
+		border: 1px solid #d8e1f1;
+		border-radius: 12px;
+		background: #ffffff;
+		padding: 14px;
+		position: sticky;
+		top: 16px;
+		height: fit-content;
+	}
+
+	.discount-summary h4 {
+		margin: 0 0 10px;
+		color: #16306b;
+		font-size: 1rem;
+	}
+
+	.discount-summary-item {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: 10px;
+		padding: 8px 0;
+		border-top: 1px dashed #e2e9f5;
+		font-size: 0.86rem;
+	}
+
+	.discount-summary-item:first-of-type {
+		border-top: 0;
+		padding-top: 0;
+	}
+
+	.discount-summary-item span:first-child {
+		color: #5f6d8d;
+		font-weight: 600;
+	}
+
+	.discount-summary-item strong {
+		color: #1e2f58;
+		font-weight: 800;
+	}
+
+	.discount-view .discount-primary-btn {
+		cursor: pointer;
+	}
+
+	.discount-note {
+		margin-top: 8px;
+		font-size: 0.8rem;
+		color: #6d7895;
+	}
+
+	@media (max-width: 1080px) {
+		.discount-create-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.discount-summary {
+			position: static;
+		}
+	}
+
+	@media (max-width: 900px) {
+		.discount-toolbar {
+			grid-template-columns: 1fr;
+		}
+
+		.discount-table-wrap {
+			overflow-x: auto;
+		}
+
+		.discount-form-row {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>
+
+<article class="content-section" id="discount-management">
+	<section class="discount-tab" data-discount-tab>
+		<div class="discount-view active" data-discount-view="manage">
+			<header class="discount-header">
+				<h3 class="discount-title">Manage Discount</h3>
+				<button type="button" class="discount-primary-btn" data-discount-open-create>New Discount</button>
+			</header>
+
+			<div class="discount-toolbar">
+				<div class="discount-field">🔎 <input type="text" id="discountSearchInput" placeholder="Search discount code"></div>
+				<div class="discount-field">▾ <select id="discountCategoryFilter"><option value="all">All Categories</option><option value="seasonal">Seasonal</option><option value="vip">VIP</option></select></div>
+				<div class="discount-field">▾ <select id="discountStatusFilter"><option value="all">Status</option><option value="active">Active</option><option value="ended">Ended</option></select></div>
+				<div class="discount-field discount-view-toggle"><button type="button" id="discountListViewBtn" class="active">▤ List</button><button type="button" id="discountGridViewBtn">▦ Grid</button></div>
+			</div>
+
+			<div class="discount-table-wrap">
+				<table class="discount-table">
+					<thead>
+						<tr>
+							<th>ID</th>
+							<th>Code</th>
+							<th>Status</th>
+							<th>Customer</th>
+							<th>Discount</th>
+							<th>Limit Use</th>
+							<th>Actions</th>
+						</tr>
+					</thead>
+					<tbody id="discountTableBody"></tbody>
+				</table>
+			</div>
+
+			<div class="discount-grid-wrap" id="discountGridWrap"></div>
+
+			<div class="discount-pagination">
+				<button type="button" id="discountPrevPageBtn">← Previous</button>
+				<span class="current" id="discountCurrentPage">1</span>
+				<span id="discountPageMeta">1 / 1</span>
+				<button type="button" id="discountNextPageBtn">Next →</button>
+			</div>
+		</div>
+
+		<div class="discount-view" data-discount-view="create">
+			<header class="discount-header">
+				<h3 class="discount-title">Create Discount</h3>
+				<button type="button" class="discount-primary-btn" id="discountAddBtn">Add Discount</button>
+			</header>
+
+			<div class="discount-create-grid">
+				<div>
+					<article class="discount-card">
+						<h4>Method Selection</h4>
+						<div class="discount-segment">
+							<button type="button" class="active" id="discountMethodCodeBtn">Discount code</button>
+							<button type="button" id="discountMethodAutoBtn">Automatic discount</button>
+						</div>
+
+						<div class="discount-field-block">
+							<label>Discount Code</label>
+							<input type="text" class="discount-input" id="discountCodeInput" value="SUMMER">
+							<p class="discount-help">Customer must enter this code when paying.</p>
+						</div>
+					</article>
+
+					<article class="discount-card">
+						<h4>Value</h4>
+						<div class="discount-field-block">
+							<label>Order discount</label>
+							<div class="discount-inline">
+								<input type="number" min="0" max="100" class="discount-input" id="discountPercentInput" value="10">
+								<span class="discount-percent">%</span>
+							</div>
+							<p class="discount-help">Percentage off</p>
+						</div>
+					</article>
+
+					<article class="discount-card">
+						<h4>Customer Eligibility</h4>
+						<div class="discount-radio-group">
+							<label class="discount-radio"><input type="radio" name="discountUserType" value="all" checked> All Customer</label>
+							<label class="discount-radio"><input type="radio" name="discountUserType" value="segment"> Specific Customer segments</label>
+							<select class="discount-select" id="discountSegmentSelect">
+								<option>Choose segment...</option>
+								<option>Loyal Customers</option>
+								<option>Wholesale</option>
+							</select>
+							<label class="discount-radio"><input type="radio" name="discountUserType" value="specific"> Specific Customer</label>
+							<input type="text" class="discount-input" id="discountSpecificCustomerInput" placeholder="Search customer">
+						</div>
+					</article>
+
+					<article class="discount-card">
+						<h4>Usage Limits & Scheduling</h4>
+						<div class="discount-form-row">
+							<div class="discount-field-block">
+								<label>Time Started</label>
+								<input type="datetime-local" class="discount-input" id="discountStartInput" value="2026-04-05T09:00">
+							</div>
+							<div class="discount-field-block">
+								<label>Time Ended</label>
+								<input type="datetime-local" class="discount-input" id="discountEndInput" value="2026-05-05T23:59">
+							</div>
+						</div>
+						<div class="discount-check-row">
+							<label class="discount-check"><input type="checkbox" id="discountLimitToggle" checked> Limit of total Uses</label>
+							<input type="number" min="1" class="discount-input" id="discountLimitInput" value="3">
+							<label class="discount-check"><input type="checkbox" id="discountOneTimeToggle"> One time use ONLY</label>
+						</div>
+					</article>
+				</div>
+
+				<aside class="discount-summary">
+					<h4>Summary</h4>
+					<div class="discount-summary-item"><span>Status</span><strong id="discountSummaryStatus">Draft</strong></div>
+					<div class="discount-summary-item"><span>Code</span><strong id="discountSummaryCode">SUMMER</strong></div>
+					<div class="discount-summary-item"><span>Discount</span><strong id="discountSummaryDiscount">10%</strong></div>
+					<div class="discount-summary-item"><span>User</span><strong id="discountSummaryUser">All Customer</strong></div>
+					<div class="discount-summary-item"><span>Limit</span><strong id="discountSummaryLimit">3</strong></div>
+					<div class="discount-summary-item"><span>Schedule</span><strong id="discountSummarySchedule">Apr 5 - May 5</strong></div>
+					<div class="discount-field-block" style="margin-top: 14px;">
+						<button type="button" class="discount-primary-btn" data-discount-open-manage style="width:100%;">Back to Manage</button>
+					</div>
+					<p class="discount-note">Database is not connected yet. Add Discount will not be saved.</p>
+				</aside>
+			</div>
+		</div>
+	</section>
+</article>
+
+<script>
+	(function () {
+		if (window.__discountTabBound) return;
+		window.__discountTabBound = true;
+
+		const root = document.querySelector('[data-discount-tab]');
+		if (!root) return;
+
+		const manageView = root.querySelector('[data-discount-view="manage"]');
+		const createView = root.querySelector('[data-discount-view="create"]');
+		const openCreateBtn = root.querySelector('[data-discount-open-create]');
+		const openManageBtn = root.querySelector('[data-discount-open-manage]');
+		const addDiscountBtn = root.querySelector('#discountAddBtn');
+
+		const searchInput = root.querySelector('#discountSearchInput');
+		const categoryFilter = root.querySelector('#discountCategoryFilter');
+		const statusFilter = root.querySelector('#discountStatusFilter');
+		const listViewBtn = root.querySelector('#discountListViewBtn');
+		const gridViewBtn = root.querySelector('#discountGridViewBtn');
+		const tableWrap = root.querySelector('.discount-table-wrap');
+		const gridWrap = root.querySelector('#discountGridWrap');
+		const tableBody = root.querySelector('#discountTableBody');
+		const prevPageBtn = root.querySelector('#discountPrevPageBtn');
+		const nextPageBtn = root.querySelector('#discountNextPageBtn');
+		const currentPageEl = root.querySelector('#discountCurrentPage');
+		const pageMetaEl = root.querySelector('#discountPageMeta');
+
+		const methodCodeBtn = root.querySelector('#discountMethodCodeBtn');
+		const methodAutoBtn = root.querySelector('#discountMethodAutoBtn');
+		const codeInput = root.querySelector('#discountCodeInput');
+		const percentInput = root.querySelector('#discountPercentInput');
+		const userRadios = root.querySelectorAll('input[name="discountUserType"]');
+		const segmentSelect = root.querySelector('#discountSegmentSelect');
+		const specificCustomerInput = root.querySelector('#discountSpecificCustomerInput');
+		const startInput = root.querySelector('#discountStartInput');
+		const endInput = root.querySelector('#discountEndInput');
+		const limitToggle = root.querySelector('#discountLimitToggle');
+		const limitInput = root.querySelector('#discountLimitInput');
+		const oneTimeToggle = root.querySelector('#discountOneTimeToggle');
+
+		const summaryStatus = root.querySelector('#discountSummaryStatus');
+		const summaryCode = root.querySelector('#discountSummaryCode');
+		const summaryDiscount = root.querySelector('#discountSummaryDiscount');
+		const summaryUser = root.querySelector('#discountSummaryUser');
+		const summaryLimit = root.querySelector('#discountSummaryLimit');
+		const summarySchedule = root.querySelector('#discountSummarySchedule');
+
+		const discounts = [
+			{ id: 1, code: 'X530fe', status: 'active', customer: 'all', discount: 15, limitUse: 8, category: 'seasonal' },
+			{ id: 2, code: 'HAPFEB', status: 'ended', customer: 'specific', discount: 20, limitUse: 4, category: 'vip' },
+			{ id: 3, code: 'SUMMER10', status: 'active', customer: 'all', discount: 10, limitUse: 6, category: 'seasonal' },
+			{ id: 4, code: 'VIP25', status: 'ended', customer: 'specific', discount: 25, limitUse: 2, category: 'vip' },
+			{ id: 5, code: 'WINTER8', status: 'active', customer: 'all', discount: 8, limitUse: 9, category: 'seasonal' },
+			{ id: 6, code: 'MEMBER12', status: 'active', customer: 'specific', discount: 12, limitUse: 5, category: 'vip' }
+		];
+
+		const state = {
+			search: '',
+			category: 'all',
+			status: 'all',
+			view: 'list',
+			page: 1,
+			pageSize: 8
+		};
+
+		const switchView = (view) => {
+			const isCreate = view === 'create';
+			manageView.classList.toggle('active', !isCreate);
+			createView.classList.toggle('active', isCreate);
+		};
+
+		const getFilteredDiscounts = () => {
+			return discounts.filter((item) => {
+				const matchSearch = !state.search || item.code.toLowerCase().includes(state.search.toLowerCase());
+				const matchCategory = state.category === 'all' || item.category === state.category;
+				const matchStatus = state.status === 'all' || item.status === state.status;
+				return matchSearch && matchCategory && matchStatus;
+			});
+		};
+
+		const getPagedDiscounts = (rows) => {
+			const totalPages = Math.max(1, Math.ceil(rows.length / state.pageSize));
+			state.page = Math.min(state.page, totalPages);
+			const start = (state.page - 1) * state.pageSize;
+			return {
+				rows: rows.slice(start, start + state.pageSize),
+				totalPages
+			};
+		};
+
+		const renderListRows = (rows) => {
+			if (!tableBody) return;
+			if (!rows.length) {
+				tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#6b7798;">No discounts match your filters.</td></tr>';
+				return;
+			}
+
+			tableBody.innerHTML = rows.map((item) => `
+				<tr>
+					<td>${item.id}</td>
+					<td>${item.code}</td>
+					<td><span class="discount-badge ${item.status}">${item.status === 'active' ? 'Active' : 'Ended'}</span></td>
+					<td><span class="discount-tag ${item.customer === 'specific' ? 'specific' : ''}">${item.customer === 'all' ? 'ALL' : 'Specific'}</span></td>
+					<td>${item.discount}%</td>
+					<td>${item.limitUse}</td>
+					<td><span class="discount-edit">✎</span></td>
+				</tr>
+			`).join('');
+		};
+
+		const renderGridRows = (rows) => {
+			if (!gridWrap) return;
+			if (!rows.length) {
+				gridWrap.innerHTML = '<div class="discount-grid-card"><h5>No discounts found</h5><div class="discount-grid-meta"><span>Try adjusting search or filters.</span></div></div>';
+				return;
+			}
+
+			gridWrap.innerHTML = rows.map((item) => `
+				<div class="discount-grid-card">
+					<h5>${item.code}</h5>
+					<div class="discount-grid-meta">
+						<span>Status: ${item.status === 'active' ? 'Active' : 'Ended'}</span>
+						<span>Customer: ${item.customer === 'all' ? 'ALL' : 'Specific'}</span>
+						<span>Discount: ${item.discount}%</span>
+						<span>Limit: ${item.limitUse}</span>
+					</div>
+				</div>
+			`).join('');
+		};
+
+		const renderPagination = (totalPages) => {
+			if (currentPageEl) currentPageEl.textContent = String(state.page);
+			if (pageMetaEl) pageMetaEl.textContent = `${state.page} / ${totalPages}`;
+			if (prevPageBtn) prevPageBtn.disabled = state.page <= 1;
+			if (nextPageBtn) nextPageBtn.disabled = state.page >= totalPages;
+		};
+
+		const renderManageView = () => {
+			const filtered = getFilteredDiscounts();
+			const { rows, totalPages } = getPagedDiscounts(filtered);
+			renderListRows(rows);
+			renderGridRows(rows);
+			renderPagination(totalPages);
+
+			const isGrid = state.view === 'grid';
+			if (tableWrap) tableWrap.style.display = isGrid ? 'none' : 'block';
+			if (gridWrap) gridWrap.classList.toggle('active', isGrid);
+			if (listViewBtn) listViewBtn.classList.toggle('active', !isGrid);
+			if (gridViewBtn) gridViewBtn.classList.toggle('active', isGrid);
+		};
+
+		const selectedUserLabel = () => {
+			const checked = root.querySelector('input[name="discountUserType"]:checked');
+			if (!checked || checked.value === 'all') return 'All Customer';
+			if (checked.value === 'segment') return segmentSelect && segmentSelect.value ? segmentSelect.value : 'Segment';
+			return specificCustomerInput && specificCustomerInput.value ? specificCustomerInput.value : 'Specific Customer';
+		};
+
+		const updateSummary = () => {
+			if (summaryCode) summaryCode.textContent = (codeInput && codeInput.value.trim()) || 'DRAFT';
+			if (summaryDiscount) summaryDiscount.textContent = `${Number(percentInput && percentInput.value || 0)}%`;
+			if (summaryUser) summaryUser.textContent = selectedUserLabel();
+			if (summaryLimit) {
+				summaryLimit.textContent = limitToggle && limitToggle.checked
+					? String(limitInput && limitInput.value ? limitInput.value : '0')
+					: (oneTimeToggle && oneTimeToggle.checked ? 'One-time only' : 'Unlimited');
+			}
+			if (summarySchedule) {
+				const start = startInput && startInput.value ? startInput.value.replace('T', ' ') : '-';
+				const end = endInput && endInput.value ? endInput.value.replace('T', ' ') : '-';
+				summarySchedule.textContent = `${start} to ${end}`;
+			}
+			if (summaryStatus) summaryStatus.textContent = 'Draft';
+		};
+
+		if (openCreateBtn) {
+			openCreateBtn.addEventListener('click', () => switchView('create'));
+		}
+		if (openManageBtn) {
+			openManageBtn.addEventListener('click', () => switchView('manage'));
+		}
+
+		if (searchInput) {
+			searchInput.addEventListener('input', () => {
+				state.search = searchInput.value.trim();
+				state.page = 1;
+				renderManageView();
+			});
+		}
+		if (categoryFilter) {
+			categoryFilter.addEventListener('change', () => {
+				state.category = categoryFilter.value;
+				state.page = 1;
+				renderManageView();
+			});
+		}
+		if (statusFilter) {
+			statusFilter.addEventListener('change', () => {
+				state.status = statusFilter.value;
+				state.page = 1;
+				renderManageView();
+			});
+		}
+		if (listViewBtn) {
+			listViewBtn.addEventListener('click', () => {
+				state.view = 'list';
+				renderManageView();
+			});
+		}
+		if (gridViewBtn) {
+			gridViewBtn.addEventListener('click', () => {
+				state.view = 'grid';
+				renderManageView();
+			});
+		}
+		if (prevPageBtn) {
+			prevPageBtn.addEventListener('click', () => {
+				state.page = Math.max(1, state.page - 1);
+				renderManageView();
+			});
+		}
+		if (nextPageBtn) {
+			nextPageBtn.addEventListener('click', () => {
+				state.page += 1;
+				renderManageView();
+			});
+		}
+
+		if (methodCodeBtn && methodAutoBtn) {
+			methodCodeBtn.addEventListener('click', () => {
+				methodCodeBtn.classList.add('active');
+				methodAutoBtn.classList.remove('active');
+			});
+			methodAutoBtn.addEventListener('click', () => {
+				methodAutoBtn.classList.add('active');
+				methodCodeBtn.classList.remove('active');
+			});
+		}
+
+		[codeInput, percentInput, segmentSelect, specificCustomerInput, startInput, endInput, limitInput, limitToggle, oneTimeToggle].forEach((el) => {
+			if (!el) return;
+			el.addEventListener('input', updateSummary);
+			el.addEventListener('change', updateSummary);
+		});
+		userRadios.forEach((radio) => radio.addEventListener('change', updateSummary));
+
+		if (addDiscountBtn) {
+			addDiscountBtn.addEventListener('click', () => {
+				alert('Create Discount is not available yet because the database is not connected.');
+			});
+		}
+
+		renderManageView();
+		updateSummary();
+	})();
+</script>

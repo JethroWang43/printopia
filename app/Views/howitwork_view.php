@@ -12,27 +12,26 @@
             --brand-gold: #e7a821;
             --brand-navy: #10224f;
             --white: #ffffff;
-            --danger: #b32319;
             --text: #1f2430;
             --muted: #596074;
-            --surface: #eef2f8;
-            --shadow-soft: 0 10px 22px rgba(16, 34, 79, 0.12);
+            --line: #d6deef;
+            --surface: #f5f8ff;
+            --section-screen-height: min(calc(100svh - 78px), 820px);
+            --shadow-soft: 0 12px 28px rgba(16, 34, 79, 0.12);
+            --shadow-strong: 0 18px 34px rgba(16, 34, 79, 0.18);
         }
 
         * {
             box-sizing: border-box;
         }
 
-        html,
-        body {
-            min-height: 100%;
-        }
-
         body {
             margin: 0;
             font-family: "Sora", sans-serif;
             color: var(--text);
-            background: linear-gradient(180deg, #f7f8fb 0%, #eef1f8 100%);
+            background:
+                radial-gradient(circle at 18% -10%, rgba(255, 255, 255, 0.82), transparent 42%),
+                linear-gradient(180deg, #f7f9ff 0%, #ebf0f9 100%);
             display: flex;
             flex-direction: column;
             line-height: 1.45;
@@ -40,6 +39,7 @@
 
         main {
             flex: 1 0 auto;
+            scroll-snap-type: y mandatory;
         }
 
         a {
@@ -168,47 +168,31 @@
             display: block;
         }
 
-        .user-role {
-            width: 100%;
-            border: 0;
-            border-bottom: 1px solid #eef2f8;
-            background: #ffffff;
-            color: #192f68;
-            text-align: left;
-            padding: 10px 12px;
-            font: inherit;
-            font-size: 0.84rem;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .user-role:last-child {
-            border-bottom: 0;
-        }
-
-        .user-role:hover {
-            background: #f5f8ff;
-        }
-
         .hero-title {
             text-align: center;
             color: var(--brand-navy);
-            margin: 8px 0 22px;
-            font-size: clamp(2rem, 4vw, 2.9rem);
+            margin: 8px 0 26px;
+            font-size: clamp(2.1rem, 4vw, 3rem);
+            letter-spacing: -0.02em;
         }
 
         .steps-intro {
-            padding: 28px 0 24px;
+            padding: 34px 0 28px;
             background: #ffffff;
-            border-top: 1px solid #d6deef;
-            border-bottom: 1px solid #d6deef;
+            border-top: 1px solid var(--line);
+            border-bottom: 1px solid var(--line);
+            min-height: var(--section-screen-height);
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
+            display: flex;
+            align-items: center;
         }
 
         .steps-grid {
-            padding: 6px 0 10px;
+            padding: 8px 0 12px;
             display: grid;
             grid-template-columns: repeat(3, minmax(260px, 1fr));
-            gap: 18px;
+            gap: 20px;
         }
 
         .step-item {
@@ -217,11 +201,17 @@
 
         .step-frame {
             background: var(--white);
-            border-radius: 14px;
-            border: 1px solid #dfe6f3;
+            border-radius: 16px;
+            border: 1px solid #dce5f2;
             box-shadow: var(--shadow-soft);
             overflow: hidden;
             margin-bottom: 14px;
+            transition: transform 0.24s ease, box-shadow 0.24s ease;
+        }
+
+        .step-item:hover .step-frame {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-strong);
         }
 
         .step-item:nth-child(2) .step-frame {
@@ -236,7 +226,7 @@
 
         .step-frame img {
             width: 100%;
-            height: 190px;
+            height: 198px;
             object-fit: cover;
             display: block;
             background: #d8deec;
@@ -263,7 +253,8 @@
         .step-item h3 {
             margin: 0;
             color: var(--brand-navy);
-            font-size: clamp(1.8rem, 3vw, 2.9rem);
+            font-size: clamp(1.9rem, 3vw, 3rem);
+            letter-spacing: -0.02em;
         }
 
         .design-cta-wrap {
@@ -276,20 +267,31 @@
             display: inline-block;
             min-width: 190px;
             text-align: center;
-            padding: 10px 18px;
-            background: linear-gradient(180deg, #bf2e1e 0%, #9c1e13 100%);
+            padding: 11px 20px;
+            background: linear-gradient(180deg, #ca3a2a 0%, #9f2117 100%);
             color: var(--white);
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 1.08rem;
             font-weight: 700;
-            box-shadow: 0 10px 16px rgba(146, 23, 12, 0.36);
+            box-shadow: 0 12px 22px rgba(146, 23, 12, 0.34);
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .design-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 26px rgba(146, 23, 12, 0.4);
         }
 
         .detail-row {
-            background: #edf1f8;
-            border-top: 1px solid #d6deef;
-            border-bottom: 1px solid #d6deef;
-            padding: 34px 0;
+            background: var(--surface);
+            border-top: 1px solid var(--line);
+            border-bottom: 1px solid var(--line);
+            padding: 40px 0;
+            min-height: var(--section-screen-height);
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
+            display: flex;
+            align-items: center;
         }
 
         .detail-grid {
@@ -302,14 +304,17 @@
         .detail-icon {
             width: 220px;
             height: 220px;
-            border-radius: 18px;
-            background: #0f1a38;
+            border-radius: 20px;
+            background:
+                radial-gradient(circle at 25% 20%, rgba(255, 255, 255, 0.2), transparent 52%),
+                linear-gradient(160deg, #0f1a38 0%, #1a2d5f 100%);
             color: #f2f5ff;
             display: grid;
             place-items: center;
             font-size: 2rem;
             font-weight: 800;
             letter-spacing: 1px;
+            box-shadow: 0 16px 28px rgba(16, 34, 79, 0.22);
         }
 
         .detail-content h3 {
@@ -328,7 +333,12 @@
 
         .save-row {
             background: #ffffff;
-            padding: 34px 0 44px;
+            padding: 38px 0 50px;
+            min-height: var(--section-screen-height);
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
+            display: flex;
+            align-items: center;
         }
 
         .save-grid {
@@ -368,10 +378,16 @@
 
         .gallery-card {
             background: var(--white);
-            border-radius: 14px;
+            border-radius: 16px;
             border: 1px solid #dfe6f3;
             box-shadow: var(--shadow-soft);
             overflow: hidden;
+            transition: transform 0.22s ease, box-shadow 0.22s ease;
+        }
+
+        .gallery-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-strong);
         }
 
         .gallery-card img {
@@ -475,6 +491,17 @@
         }
 
         @media (max-width: 900px) {
+            main {
+                scroll-snap-type: none;
+            }
+
+            .steps-intro,
+            .detail-row,
+            .save-row {
+                min-height: auto;
+                scroll-snap-align: none;
+            }
+
             .topbar .container,
             .site-footer .container {
                 padding-left: 14px;
@@ -526,34 +553,7 @@
     </style>
 </head>
 <body>
-    <header class="topbar">
-        <div class="container topbar-inner">
-            <a class="logo" href="<?= base_url(); ?>">
-                <span class="logo-mark">P</span>
-                <span>Printopia</span>
-            </a>
-
-            <nav class="main-nav" aria-label="Main navigation">
-                <a href="<?= base_url(); ?>">Home</a>
-                <a href="<?= base_url('products'); ?>">Products</a>
-                <a href="<?= base_url('how-it-works'); ?>" class="active">How it works</a>
-                <a href="<?= base_url('contact'); ?>">Contact Us</a>
-            </nav>
-
-            <div class="user-menu" aria-label="Role menu">
-                <button type="button" class="user-chip-btn" aria-haspopup="true" aria-expanded="false">
-                    <span>◎</span>
-                    <span>Sample User</span>
-                    <span>▾</span>
-                </button>
-                <div class="user-dropdown" role="menu" aria-label="Select role">
-                    <button type="button" class="user-role" role="menuitem">User</button>
-                    <a class="user-role" role="menuitem" href="<?= base_url('admin'); ?>">Admin</a>
-                    <a class="user-role" role="menuitem" href="<?= base_url('employee'); ?>">Employee</a>
-                </div>
-            </div>
-        </div>
-    </header>
+    <?= view('include/nav_view', ['activePage' => 'how-it-works']); ?>
 
     <main id="main-content">
         <section class="steps-intro">
@@ -643,50 +643,9 @@
         </section>
     </main>
 
-    <footer class="site-footer" id="contact">
-        <div class="container">
-            <div class="footer-grid">
-                <section>
-                    <div class="footer-logo">
-                        <span class="logo-mark">P</span>
-                        <span>Printopia</span>
-                    </div>
-                    <p>Your partner for custom printing solutions with a clean and easy ordering workflow.</p>
-                </section>
-
-                <section>
-                    <h5>Quick Links</h5>
-                    <ul>
-                        <li><a href="<?= base_url(); ?>">Home</a></li>
-                        <li><a href="<?= base_url('products'); ?>">Products</a></li>
-                        <li><a href="<?= base_url('how-it-works'); ?>">How it works</a></li>
-                        <li><a href="<?= base_url('contact'); ?>">Contact Us</a></li>
-                    </ul>
-                </section>
-
-                <section>
-                    <h5>Services</h5>
-                    <ul>
-                        <li>Custom 3D model design</li>
-                        <li>Design consultation</li>
-                        <li>Quality assurance</li>
-                        <li>Trusted order handling</li>
-                    </ul>
-                </section>
-
-                <section>
-                    <h5>Contact Information</h5>
-                    <ul>
-                        <li>0922-4756841</li>
-                        <li>esensoweta61@gmail.com</li>
-                        <li>Tanauan, Batangas</li>
-                    </ul>
-                </section>
-            </div>
-
-            <div class="footer-bottom">&copy; 2026 Printopia. All rights reserved.</div>
-        </div>
-    </footer>
+    <?= view('include/foot_view'); ?>
     <script src="<?= base_url('hci-assist.js'); ?>"></script>
 </body>
 </html>
+
+

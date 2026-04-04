@@ -154,28 +154,6 @@
             display: block;
         }
 
-        .user-role {
-            width: 100%;
-            border: 0;
-            border-bottom: 1px solid #eef2f8;
-            background: #ffffff;
-            color: #192f68;
-            text-align: left;
-            padding: 10px 12px;
-            font: inherit;
-            font-size: 0.84rem;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .user-role:last-child {
-            border-bottom: 0;
-        }
-
-        .user-role:hover {
-            background: #f5f8ff;
-        }
-
         .main-content {
             max-width: 100%;
             margin: 0 auto;
@@ -449,34 +427,7 @@
     </style>
 </head>
 <body>
-    <header class="topbar">
-        <div class="topbar-inner">
-            <a class="logo" href="<?= base_url(); ?>">
-                <span class="logo-mark">P</span>
-                <span>Printopia</span>
-            </a>
-
-            <nav class="main-nav" aria-label="Main navigation">
-                <a href="<?= base_url(); ?>">Home</a>
-                <a href="<?= base_url('products'); ?>">Products</a>
-                <a href="<?= base_url('how-it-works'); ?>">How it works</a>
-                <a href="<?= base_url('contact'); ?>">Contact Us</a>
-            </nav>
-
-            <div class="user-menu" aria-label="Role menu">
-                <button type="button" class="user-chip-btn" aria-haspopup="true" aria-expanded="false">
-                    <span>◎</span>
-                    <span>Sample User</span>
-                    <span>▾</span>
-                </button>
-                <div class="user-dropdown" role="menu" aria-label="Select role">
-                    <button type="button" class="user-role" role="menuitem">User</button>
-                    <a class="user-role" role="menuitem" href="<?= base_url('admin'); ?>">Admin</a>
-                    <a class="user-role" role="menuitem" href="<?= base_url('employee'); ?>">Employee</a>
-                </div>
-            </div>
-        </div>
-    </header>
+    <?= view('include/nav_view', ['activePage' => '']); ?>
 
     <!-- Main Content -->
     <div class="main-content" id="main-content">
@@ -688,3 +639,5 @@
     </script>
 </body>
 </html>
+
+

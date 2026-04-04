@@ -170,28 +170,6 @@
             transform: translateY(0);
         }
 
-        .user-role {
-            display: block;
-            width: 100%;
-            text-align: left;
-            padding: 10px 12px;
-            border: 0;
-            border-bottom: 1px solid #edf1f8;
-            background: transparent;
-            color: #273257;
-            font-size: 0.86rem;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .user-role:last-child {
-            border-bottom: 0;
-        }
-
-        .user-role:hover {
-            background: #f5f7fb;
-        }
-
         .dashboard {
             flex: 1 0 auto;
             padding: 28px 0 34px;
@@ -435,15 +413,15 @@
         }
 
         .task-frame-panel {
-            background: var(--card);
-            border: 1px solid #b8d7eb;
-            border-radius: 10px;
-            padding: 14px;
-            box-shadow: 0 8px 16px rgba(16, 34, 79, 0.05);
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            padding: 0;
+            box-shadow: none;
         }
 
         .task-frame-panel h3 {
-            margin: 0 0 10px;
+            margin: 0 0 8px;
             color: #1f2430;
             font-size: 1.22rem;
         }
@@ -451,9 +429,11 @@
         .task-embed {
             width: 100%;
             height: 84vh;
-            border: 1px solid #d8e0ee;
-            border-radius: 10px;
-            background: #ffffff;
+            border: 0;
+            border-radius: 12px;
+            background: transparent;
+            display: block;
+            box-shadow: 0 12px 22px rgba(16, 34, 79, 0.08);
         }
 
         .site-footer {
@@ -560,34 +540,7 @@
     </style>
 </head>
 <body>
-    <header class="topbar">
-        <div class="container topbar-inner">
-            <a class="logo" href="<?= base_url(); ?>">
-                <span class="logo-mark">P</span>
-                <span>Printopia</span>
-            </a>
-
-            <nav class="main-nav" aria-label="Main navigation">
-                <a href="<?= base_url(); ?>">Home</a>
-                <a href="<?= base_url('products'); ?>">Products</a>
-                <a href="<?= base_url('how-it-works'); ?>">How it works</a>
-                <a href="<?= base_url('contact'); ?>">Contact Us</a>
-            </nav>
-
-            <div class="user-menu" aria-label="Role menu">
-                <button type="button" class="user-chip-btn" aria-haspopup="true" aria-expanded="false">
-                    <span>◎</span>
-                    <span>Sample User</span>
-                    <span>▾</span>
-                </button>
-                <div class="user-dropdown" role="menu" aria-label="Select role">
-                    <button type="button" class="user-role" role="menuitem">User</button>
-                    <a class="user-role" role="menuitem" href="<?= base_url('admin'); ?>">Admin</a>
-                    <a class="user-role" role="menuitem" href="<?= base_url('employee'); ?>">Employee</a>
-                </div>
-            </div>
-        </div>
-    </header>
+    <?= view('include/nav_view', ['activePage' => '', 'userLabel' => 'Admin User']); ?>
 
     <main class="dashboard">
         <div class="container dashboard-grid">
@@ -603,14 +556,14 @@
 
                 <ul class="menu">
                     <li><a href="#" class="active" data-section="dashboard-overview">Dashboard Overview</a></li>
-                    <li><a href="#">Notification</a></li>
+                    <li><a href="#" data-section="notification-management">Notification</a></li>
                     <li><a href="#" data-section="calendar-management">Calendar</a></li>
                     <li><a href="#">Gallery Management</a></li>
-                    <li><a href="#">Order Management</a></li>
-                    <li><a href="#">Inventory Management</a></li>
+                    <li><a href="#" data-section="order-management">Order Management</a></li>
+                    <li><a href="#" data-section="inventory-management">Inventory Management</a></li>
                     <li><a href="#">Account Management</a></li>
                     <li><a href="#" data-section="task-management">Task Management</a></li>
-                    <li><a href="#">Discount</a></li>
+                    <li><a href="#" data-section="discount-management">Discount</a></li>
                     <li><a href="#">Control Management</a></li>
                 </ul>
             </aside>
@@ -654,21 +607,21 @@
                         <div class="content">
                             <article class="panel">
                                 <h3>Order Status Breakdown</h3>
-                                <div class="status-row">
-                                    <div class="status-head"><span>Pending</span><span>0</span></div>
-                                    <div class="track"><span class="bar" style="width:0%"></span></div>
+                                <div class="status-row" data-status-row="pending">
+                                    <div class="status-head"><span>Pending</span><span data-status-count="pending">0</span></div>
+                                    <div class="track"><span class="bar" data-status-bar="pending" style="width:0%"></span></div>
                                 </div>
-                                <div class="status-row">
-                                    <div class="status-head"><span>Processing</span><span>0</span></div>
-                                    <div class="track"><span class="bar" style="width:0%"></span></div>
+                                <div class="status-row" data-status-row="processing">
+                                    <div class="status-head"><span>Processing</span><span data-status-count="processing">0</span></div>
+                                    <div class="track"><span class="bar" data-status-bar="processing" style="width:0%"></span></div>
                                 </div>
-                                <div class="status-row">
-                                    <div class="status-head"><span>Completed</span><span>0</span></div>
-                                    <div class="track"><span class="bar" style="width:0%"></span></div>
+                                <div class="status-row" data-status-row="completed">
+                                    <div class="status-head"><span>Completed</span><span data-status-count="completed">0</span></div>
+                                    <div class="track"><span class="bar" data-status-bar="completed" style="width:0%"></span></div>
                                 </div>
-                                <div class="status-row">
-                                    <div class="status-head"><span>Cancelled</span><span>0</span></div>
-                                    <div class="track"><span class="bar" style="width:0%"></span></div>
+                                <div class="status-row" data-status-row="cancelled">
+                                    <div class="status-head"><span>Cancelled</span><span data-status-count="cancelled">0</span></div>
+                                    <div class="track"><span class="bar" data-status-bar="cancelled" style="width:0%"></span></div>
                                 </div>
                             </article>
 
@@ -693,85 +646,55 @@
                     </div>
                 </div>
 
-                <article class="task-frame-panel content-section" id="calendar-management">
-                    <h3>Calendar</h3>
-                    <iframe
-                        class="task-embed"
-                        id="calendar-management-frame"
-                        src="about:blank"
-                        data-src="<?= base_url('trello-task/index.html?view=calendar'); ?>"
-                        title="Trello Calendar"
-                        loading="lazy"
-                        referrerpolicy="no-referrer"
-                    ></iframe>
-                </article>
+                <?= view('admin_tab/calendar_tab'); ?>
 
-                <article class="task-frame-panel content-section" id="task-management">
-                    <h3>Task Management</h3>
-                    <iframe
-                        class="task-embed"
-                        id="task-management-frame"
-                        src="about:blank"
-                        data-src="<?= base_url('trello-task/index.html?view=tasks'); ?>"
-                        title="Trello Task Management"
-                        loading="lazy"
-                        referrerpolicy="no-referrer"
-                    ></iframe>
-                </article>
+                <?= view('admin_tab/notification_tab'); ?>
+
+                <?= view('admin_tab/order_tab'); ?>
+
+                <?= view('admin_tab/Inventory_tab'); ?>
+
+                <?= view('admin_tab/discount_tab'); ?>
+
+                <?= view('admin_tab/task_tab'); ?>
+
+                <iframe
+                    id="task-summary-loader"
+                    src="about:blank"
+                    data-src="<?= base_url('trello-task/index.html?view=tasks'); ?>"
+                    title="Task Summary Loader"
+                    loading="eager"
+                    referrerpolicy="no-referrer"
+                    style="position:absolute;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none;border:0;"
+                    aria-hidden="true"
+                    tabindex="-1"
+                ></iframe>
             </section>
         </div>
     </main>
 
-    <footer class="site-footer">
-        <div class="container">
-            <div class="footer-grid">
-                <section>
-                    <div class="footer-logo">
-                        <span class="logo-mark">P</span>
-                        <span>Printopia</span>
-                    </div>
-                    <p>Your partner for custom printing solutions with a clean and easy ordering workflow.</p>
-                </section>
-
-                <section>
-                    <h5>Quick Links</h5>
-                    <ul>
-                        <li><a href="<?= base_url(); ?>">Home</a></li>
-                        <li><a href="<?= base_url('products'); ?>">Products</a></li>
-                        <li><a href="<?= base_url('how-it-works'); ?>">How it works</a></li>
-                        <li><a href="<?= base_url('contact'); ?>">Contact Us</a></li>
-                    </ul>
-                </section>
-
-                <section>
-                    <h5>Services</h5>
-                    <ul>
-                        <li>Custom 3D model design</li>
-                        <li>Design consultation</li>
-                        <li>Quality assurance</li>
-                        <li>Trusted order handling</li>
-                    </ul>
-                </section>
-
-                <section>
-                    <h5>Contact Information</h5>
-                    <ul>
-                        <li>0922-4756841</li>
-                        <li>esensoweta61@gmail.com</li>
-                        <li>Tanauan, Batangas</li>
-                    </ul>
-                </section>
-            </div>
-
-            <div class="footer-bottom">&copy; 2026 Printopia. All rights reserved.</div>
-        </div>
-    </footer>
+    <?= view('include/foot_view'); ?>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const emitHciInteraction = (action, payload = {}) => {
+                const detail = {
+                    action,
+                    source: 'admin-embed',
+                    timestamp: new Date().toISOString(),
+                    payload
+                };
+
+                document.dispatchEvent(new CustomEvent('hci:interaction', { detail }));
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: 'hci:interaction', detail }, '*');
+                }
+            };
+
             const links = document.querySelectorAll('.menu a[data-section]');
             const sections = document.querySelectorAll('.content .content-section');
             const taskFrame = document.querySelector('#task-management-frame');
+            const taskSummaryLoader = document.querySelector('#task-summary-loader');
             const calendarFrame = document.querySelector('#calendar-management-frame');
             const dashboardGrid = document.querySelector('.dashboard-grid');
             const sidebarHideBtn = document.querySelector('#sidebar-hide-btn');
@@ -788,6 +711,27 @@
                 localStorage.setItem(sidebarStateKey, isHidden ? '1' : '0');
             };
 
+            const updateOrderStatusBreakdown = (summary) => {
+                const statuses = ['pending', 'processing', 'completed', 'cancelled'];
+                const counts = summary?.counts || {};
+                const percentages = summary?.percentages || {};
+
+                statuses.forEach((status) => {
+                    const countEl = document.querySelector(`[data-status-count="${status}"]`);
+                    const barEl = document.querySelector(`[data-status-bar="${status}"]`);
+
+                    const count = Number(counts[status] || 0);
+                    const pct = Math.max(0, Math.min(100, Number(percentages[status] || 0)));
+
+                    if (countEl) {
+                        countEl.textContent = String(count);
+                    }
+                    if (barEl) {
+                        barEl.style.width = `${pct}%`;
+                    }
+                });
+            };
+
             const openSection = (sectionId, activeLink) => {
                 sections.forEach(section => {
                     section.classList.toggle('active', section.id === sectionId);
@@ -799,12 +743,61 @@
 
                 if (sectionId === 'task-management' && taskFrame && taskFrame.src === 'about:blank') {
                     taskFrame.src = taskFrame.dataset.src;
+                    emitHciInteraction('embed_view_opened', { section: 'task-management' });
                 }
 
                 if (sectionId === 'calendar-management' && calendarFrame && calendarFrame.src === 'about:blank') {
                     calendarFrame.src = calendarFrame.dataset.src;
+                    emitHciInteraction('embed_view_opened', { section: 'calendar-management' });
                 }
             };
+
+            if (taskFrame) {
+                taskFrame.addEventListener('load', () => {
+                    emitHciInteraction('embed_loaded', { section: 'task-management' });
+                });
+            }
+
+            if (calendarFrame) {
+                calendarFrame.addEventListener('load', () => {
+                    emitHciInteraction('embed_loaded', { section: 'calendar-management' });
+                });
+            }
+
+            window.addEventListener('message', (event) => {
+                const data = event.data;
+                if (!data || data.type !== 'trello:board-summary') {
+                    return;
+                }
+
+                updateOrderStatusBreakdown(data.payload || {});
+                emitHciInteraction('status_breakdown_updated', {
+                    sourceBoard: data.payload?.boardName || 'Unknown',
+                    total: data.payload?.total || 0
+                });
+            });
+
+            // Preload task iframe in the background so dashboard metrics can sync immediately.
+            if (taskFrame && taskFrame.src === 'about:blank' && taskFrame.dataset.src) {
+                taskFrame.src = taskFrame.dataset.src;
+                emitHciInteraction('embed_preload_started', { section: 'task-management' });
+            }
+
+            // Guaranteed preload source for dashboard summary, independent from visible task tab iframe.
+            if (taskSummaryLoader && taskSummaryLoader.src === 'about:blank' && taskSummaryLoader.dataset.src) {
+                taskSummaryLoader.src = taskSummaryLoader.dataset.src;
+                emitHciInteraction('summary_loader_started', { section: 'task-management' });
+            }
+
+            // Preload calendar iframe shortly after page load to reduce first-open delay.
+            if (calendarFrame && calendarFrame.src === 'about:blank' && calendarFrame.dataset.src) {
+                setTimeout(() => {
+                    if (calendarFrame.src === 'about:blank') {
+                        calendarFrame.src = calendarFrame.dataset.src;
+                        emitHciInteraction('embed_preload_started', { section: 'calendar-management', delayMs: 1000 });
+                    }
+                }, 1000);
+            }
 
             links.forEach(link => {
                 link.addEventListener('click', (event) => {

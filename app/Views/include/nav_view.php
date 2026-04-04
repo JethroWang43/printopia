@@ -1,36 +1,62 @@
-<nav class="navbar navbar-expand-lg bg-body-tertiary">
-    <div class="container-fluid">
-                <a class="navbar-brand" href="<?= base_url(); ?>">TW32</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href="<?= base_url('users') ?>">Users List</a>
-                    </li>
-                    <li class="nav-item">
-                    <a class="nav-link" href="#">Link</a>
-                    </li>
-                    <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Dropdown
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#">Action</a></li>
-                        <li><a class="dropdown-item" href="#">Another action</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#">Something else here</a></li>
-                    </ul>
-                    </li>
-                    <li class="nav-item">
-                    <a class="nav-link disabled" aria-disabled="true">Disabled</a>
-                    </li>
-                </ul>
-                <form class="d-flex" role="search">
-                    <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search"/>
-                    <button class="btn btn-outline-success" type="submit">Search</button>
-                </form>
-                </div>
-            </div>
+<style>
+    .topbar .user-dropdown {
+        display: none;
+        flex-direction: column;
+    }
+
+    .topbar .user-menu:hover .user-dropdown,
+    .topbar .user-menu:focus-within .user-dropdown {
+        display: flex;
+    }
+
+    .topbar .user-dropdown .user-role {
+        display: block !important;
+        width: 100%;
+        text-align: left;
+        padding: 10px 12px;
+        border: 0;
+        background: #ffffff;
+        color: #273257;
+        font: inherit;
+        font-size: 0.86rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .topbar .user-dropdown .user-role + .user-role {
+        border-top: 1px solid #edf1f8;
+    }
+
+    .topbar .user-dropdown .user-role:hover {
+        background: #f5f7fb;
+    }
+</style>
+
+<header class="topbar">
+    <div class="container topbar-inner">
+        <a class="logo" href="<?= base_url(); ?>">
+            <span class="logo-mark">P</span>
+            <span>Printopia</span>
+        </a>
+
+        <nav class="main-nav" aria-label="Main navigation">
+            <a href="<?= base_url(); ?>" class="<?= (($activePage ?? '') === 'home') ? 'active' : ''; ?>">Home</a>
+            <a href="<?= base_url('products'); ?>" class="<?= (($activePage ?? '') === 'products') ? 'active' : ''; ?>">Products</a>
+            <a href="<?= base_url('how-it-works'); ?>" class="<?= (($activePage ?? '') === 'how-it-works') ? 'active' : ''; ?>">How it works</a>
+            <a href="<?= base_url('contact'); ?>" class="<?= (($activePage ?? '') === 'contact') ? 'active' : ''; ?>">Contact Us</a>
         </nav>
+
+        <div class="user-menu" aria-label="Role menu">
+            <button type="button" class="user-chip-btn" aria-haspopup="true" aria-expanded="false">
+                <span>◎</span>
+                <span><?= esc($userLabel ?? 'Sample User'); ?></span>
+                <span>▾</span>
+            </button>
+            <div class="user-dropdown" role="menu" aria-label="Select role">
+                <a class="user-role" role="menuitem" href="<?= base_url(); ?>">User</a>
+                <a class="user-role" role="menuitem" href="<?= base_url('admin'); ?>">Admin</a>
+                <a class="user-role" role="menuitem" href="<?= base_url('employee'); ?>">Employee</a>
+            </div>
+        </div>
+    </div>
+</header>

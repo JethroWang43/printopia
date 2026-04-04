@@ -160,27 +160,6 @@
             transform: translateY(0);
         }
 
-        .user-role {
-            display: block;
-            width: 100%;
-            text-align: left;
-            padding: 10px 12px;
-            border-bottom: 1px solid #edf1f8;
-            background: transparent;
-            color: #273257;
-            font-size: 0.86rem;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .user-role:last-child {
-            border-bottom: 0;
-        }
-
-        .user-role:hover {
-            background: #f5f7fb;
-        }
-
         .dashboard {
             flex: 1 0 auto;
             padding: 28px 0 38px;
@@ -343,9 +322,9 @@
 
         .stats {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 16px;
-            max-width: 680px;
+            max-width: 1040px;
         }
 
         .card {
@@ -369,6 +348,10 @@
 
         .card.task::before {
             border-top-color: #f0b0a8;
+        }
+
+        .card.completed::before {
+            border-top-color: #86d39a;
         }
 
         .card.notification::before {
@@ -528,15 +511,28 @@
             margin-bottom: 12px;
         }
 
-        .employee-task-checklist-item {
+        #employeeChecklistContainer {
             display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 10px;
+            white-space: normal;
+            line-height: 1.25;
+        }
+
+        .employee-task-checklist-item {
+            display: grid;
+            grid-template-columns: 18px minmax(0, 1fr) auto;
             align-items: center;
             gap: 8px;
-            padding: 6px 8px;
+            padding: 8px 10px;
             color: #2a3552;
             font-size: 0.88rem;
-            border-radius: 4px;
-            transition: background-color 0.2s, color 0.2s;
+            border-radius: 10px;
+            border: 1px solid #e4ebf7;
+            background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+            margin-bottom: 0;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
         }
 
         .employee-task-checklist-item[data-is-assigned="yes"] {
@@ -544,18 +540,50 @@
         }
 
         .employee-task-checklist-item[data-is-assigned="yes"]:hover {
-            background-color: rgba(0, 102, 204, 0.08);
-            color: #0066cc;
+            background: linear-gradient(180deg, #f9fcff 0%, #edf5ff 100%);
+            border-color: #c7dbf7;
+            color: #1d66c2;
+            box-shadow: 0 10px 18px rgba(26, 60, 117, 0.08);
+            transform: translateY(-1px);
         }
 
         .employee-task-checklist-item.done {
+            border-color: rgba(47, 179, 68, 0.22);
+            background: linear-gradient(180deg, #f3fbf4 0%, #eaf8ed 100%);
+        }
+
+        .employee-task-checklist-item.done .employee-task-checklist-text {
             text-decoration: line-through;
-            color: #5f6d89;
+            color: #4d8b59;
         }
 
         .employee-task-checklist-item[data-is-assigned="yes"].done:hover {
-            background-color: rgba(0, 102, 204, 0.08);
-            color: #0066cc;
+            background: linear-gradient(180deg, #eef8f0 0%, #e1f3e5 100%);
+            border-color: rgba(47, 179, 68, 0.28);
+            color: #2f7a3d;
+            box-shadow: 0 10px 18px rgba(47, 179, 68, 0.08);
+            transform: translateY(-1px);
+        }
+
+        .employee-task-checklist-mark {
+            width: 18px;
+            text-align: center;
+            font-size: 1rem;
+            line-height: 1;
+            flex: 0 0 auto;
+        }
+
+        .employee-task-checklist-text {
+            min-width: 0;
+            line-height: 1.4;
+        }
+
+        .employee-task-checklist-by {
+            white-space: nowrap;
+            margin-left: 8px;
+            color: #6a748d;
+            font-size: 0.8rem;
+            text-decoration: none;
         }
 
         .task-meta {
@@ -589,6 +617,11 @@
 
         .tag.todo {
             background: var(--danger);
+        }
+
+        .tag.done {
+            background: linear-gradient(180deg, #2fb344 0%, #208637 100%);
+            box-shadow: 0 4px 10px rgba(47, 179, 68, 0.28);
         }
 
         .site-footer {
@@ -696,34 +729,7 @@
     </style>
 </head>
 <body>
-    <header class="topbar">
-        <div class="container topbar-inner">
-            <a class="logo" href="<?= base_url(); ?>">
-                <span class="logo-mark">P</span>
-                <span>Printopia</span>
-            </a>
-
-            <nav class="main-nav" aria-label="Main navigation">
-                <a href="<?= base_url(); ?>">Home</a>
-                <a href="<?= base_url('products'); ?>">Products</a>
-                <a href="<?= base_url('how-it-works'); ?>">How it works</a>
-                <a href="<?= base_url('contact'); ?>">Contact Us</a>
-            </nav>
-
-            <div class="user-menu" aria-label="Role menu">
-                <button type="button" class="user-chip-btn" aria-haspopup="true" aria-expanded="false">
-                    <span>◎</span>
-                    <span>Sample User</span>
-                    <span>▾</span>
-                </button>
-                <div class="user-dropdown" role="menu" aria-label="Select role">
-                    <button type="button" class="user-role" role="menuitem">User</button>
-                    <a class="user-role" role="menuitem" href="<?= base_url('admin'); ?>">Admin</a>
-                    <a class="user-role" role="menuitem" href="<?= base_url('employee'); ?>">Employee</a>
-                </div>
-            </div>
-        </div>
-    </header>
+    <?= view('include/nav_view', ['activePage' => '', 'userLabel' => 'Employee User']); ?>
 
     <main class="dashboard">
         <div class="container dashboard-grid">
@@ -769,9 +775,17 @@
                             <span class="icon">✎</span>
                         </article>
 
+                        <article class="card completed">
+                            <div>
+                                <h5>Task Completed</h5>
+                                <strong id="completedTaskCount">0</strong>
+                            </div>
+                            <span class="icon">✔</span>
+                        </article>
+
                         <article class="card notification">
                             <div>
-                                <h5>Notification</h5>
+                                <h5>Notifications</h5>
                                 <strong id="notificationCount">0</strong>
                             </div>
                             <span class="icon">🔔</span>
@@ -780,18 +794,19 @@
 
                     <div class="panels">
                         <article class="panel">
-                            <h3>Pending Task</h3>
+                            <h3 id="pendingTaskHeading">Pending Task (0)</h3>
                             <div class="task-list" id="pendingTaskList">
                                 <div class="panel-empty">Loading Trello tasks...</div>
                             </div>
                         </article>
 
                         <article class="panel">
-                            <h3>Notifications</h3>
-                            <div class="task-list" id="overviewNotificationList">
-                                <div class="panel-empty">Loading Trello notifications...</div>
+                            <h3 id="completedTaskHeading">Completed Task (0)</h3>
+                            <div class="task-list" id="doneTaskList">
+                                <div class="panel-empty">Loading completed tasks...</div>
                             </div>
                         </article>
+
                     </div>
                 </div>
 
@@ -814,54 +829,12 @@
                         </div>
                     </article>
                 </div>
+
             </section>
         </div>
     </main>
 
-    <footer class="site-footer">
-        <div class="container">
-            <div class="footer-grid">
-                <section>
-                    <div class="footer-logo">
-                        <span class="logo-mark">P</span>
-                        <span>Printopia</span>
-                    </div>
-                    <p>Your partner for custom printing solutions with a clean and easy ordering workflow.</p>
-                </section>
-
-                <section>
-                    <h5>Quick Links</h5>
-                    <ul>
-                        <li><a href="<?= base_url(); ?>">Home</a></li>
-                        <li><a href="<?= base_url('products'); ?>">Products</a></li>
-                        <li><a href="<?= base_url('how-it-works'); ?>">How it works</a></li>
-                        <li><a href="<?= base_url('contact'); ?>">Contact Us</a></li>
-                    </ul>
-                </section>
-
-                <section>
-                    <h5>Services</h5>
-                    <ul>
-                        <li>Custom 3D model design</li>
-                        <li>Design consultation</li>
-                        <li>Quality assurance</li>
-                        <li>Trusted order handling</li>
-                    </ul>
-                </section>
-
-                <section>
-                    <h5>Contact Information</h5>
-                    <ul>
-                        <li>0922-4756841</li>
-                        <li>esensoweta61@gmail.com</li>
-                        <li>Tanauan, Batangas</li>
-                    </ul>
-                </section>
-            </div>
-
-            <div class="footer-bottom">&copy; 2026 Printopia. All rights reserved.</div>
-        </div>
-    </footer>
+    <?= view('include/foot_view'); ?>
 
     <div class="employee-task-modal" id="employeeTaskModal" aria-hidden="true">
         <div class="employee-task-modal-card">
@@ -911,17 +884,66 @@
         }
 
         function getChecklistCheckedBy(cardId, itemId) {
-            const map = getChecklistCheckedByMap();
-            return map?.[cardId]?.[itemId] || '';
+            const info = getChecklistCheckedByInfo(cardId, itemId);
+            return info ? info.name : '';
         }
 
-        function setChecklistCheckedBy(cardId, itemId, checkedByName) {
+        function getChecklistCheckedByInfo(cardId, itemId) {
+            const map = getChecklistCheckedByMap();
+            const raw = map?.[cardId]?.[itemId];
+            if (!raw) {
+                return null;
+            }
+
+            if (typeof raw === 'string') {
+                return { name: raw, checkedAt: '' };
+            }
+
+            if (typeof raw === 'object') {
+                return {
+                    name: raw.name || '',
+                    checkedAt: raw.checkedAt || ''
+                };
+            }
+
+            return null;
+        }
+
+        function setChecklistCheckedBy(cardId, itemId, checkedByName, checkedAt) {
             const map = getChecklistCheckedByMap();
             if (!map[cardId]) {
                 map[cardId] = {};
             }
-            map[cardId][itemId] = checkedByName;
+            map[cardId][itemId] = {
+                name: checkedByName,
+                checkedAt: checkedAt || new Date().toISOString()
+            };
             localStorage.setItem(CHECKED_BY_STORAGE_KEY, JSON.stringify(map));
+        }
+
+        function formatCheckedByText(info) {
+            if (!info || !info.name) {
+                return '';
+            }
+
+            if (!info.checkedAt) {
+                return `Checked by: ${info.name}`;
+            }
+
+            const checkedAt = new Date(info.checkedAt);
+            if (Number.isNaN(checkedAt.getTime())) {
+                return `Checked by: ${info.name}`;
+            }
+
+            const timestamp = checkedAt.toLocaleString('en-US', {
+                month: 'short',
+                day: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            return `Checked by: ${info.name} · ${timestamp}`;
         }
 
         function clearChecklistCheckedBy(cardId, itemId) {
@@ -1001,10 +1023,50 @@
 
         function listStatusTag(listName) {
             const name = normalize(listName);
+            if (name.includes('done') || name.includes('completed') || name.includes('complete') || name.includes('finished')) {
+                return 'done';
+            }
             if (name.includes('todo') || name.includes('to do') || name.includes('backlog')) {
                 return 'todo';
             }
             return 'pending';
+        }
+
+        function taskCompletionTag(task, employeeName) {
+            const selected = normalize(employeeName || state.selectedEmployee);
+            const totalChecklistItems = Number(task && task.checkItemTotal) || 0;
+            const completedChecklistItems = Number(task && task.checkItemComplete) || 0;
+
+            if (totalChecklistItems > 0 && completedChecklistItems >= totalChecklistItems) {
+                return 'done';
+            }
+
+            const checklists = Array.isArray(task && task.checklists) ? task.checklists : [];
+            const allItems = checklists.flatMap(function (checklist) {
+                return Array.isArray(checklist.checkItems) ? checklist.checkItems : [];
+            });
+
+            const assignedItems = allItems.filter(function (item) {
+                return parseChecklistAssignees(item.name).includes(selected);
+            });
+
+            if (assignedItems.length) {
+                const assignedDone = assignedItems.filter(function (item) {
+                    return item.state === 'complete';
+                }).length;
+
+                if (assignedDone >= assignedItems.length) {
+                    return 'done';
+                }
+            }
+
+            if (allItems.length && allItems.every(function (item) {
+                return item.state === 'complete';
+            })) {
+                return 'done';
+            }
+
+            return listStatusTag(task && task.listName);
         }
 
         function normalizeListName(name) {
@@ -1119,8 +1181,8 @@
             }
 
             container.innerHTML = tasks.map(function (task) {
-                const tag = listStatusTag(task.listName);
-                const tagLabel = tag === 'todo' ? 'To Do' : 'Pending';
+                const tag = taskCompletionTag(task, state.selectedEmployee);
+                const tagLabel = tag === 'done' ? 'Done' : (tag === 'todo' ? 'To Do' : 'Pending');
                 return `
                     <button type="button" class="task-item task-button" data-card-id="${esc(task.cardId)}" title="Open task details">
                         <div>
@@ -1148,7 +1210,8 @@
                 return (checklist.checkItems || []).map(function (item) {
                     console.log('Processing item:', item);
                     const done = item.state === 'complete';
-                    const checkedByName = done ? getChecklistCheckedBy(task.cardId, item.id) : '';
+                    const checkedByInfo = done ? getChecklistCheckedByInfo(task.cardId, item.id) : null;
+                    const checkedByText = checkedByInfo ? formatCheckedByText(checkedByInfo) : '';
                     const assignees = parseChecklistAssignees(item.name);
                     const isAssigned = assignees.includes(selected);
                     const itemHtml = `
@@ -1158,9 +1221,9 @@
                              data-item-id="${item.id}" 
                              data-is-assigned="${isAssigned ? 'yes' : 'no'}" 
                              ${isAssigned ? 'style="cursor: pointer;"' : 'style="opacity: 0.6;"'}>
-                            <span>${done ? '☑' : '☐'}</span>
-                            <span>${esc(item.name || '')}</span>
-                            ${checkedByName ? `<small style="margin-left: auto; color: #6a748d;">Checked by: ${esc(checkedByName)}</small>` : ''}
+                            <span class="employee-task-checklist-mark">${done ? '☑' : '☐'}</span>
+                            <span class="employee-task-checklist-text">${esc(item.name || '')}</span>
+                            ${checkedByText ? `<small class="employee-task-checklist-by">${esc(checkedByText)}</small>` : ''}
                         </div>
                     `;
                     return itemHtml;
@@ -1225,6 +1288,15 @@
             const container = document.getElementById('employeeChecklistContainer');
             if (!container) return;
 
+            function setChecklistItemView(item, isDone) {
+                item.classList.toggle('done', isDone);
+                item.setAttribute('aria-busy', 'false');
+                const checkbox = item.querySelector('.employee-task-checklist-mark');
+                if (checkbox) {
+                    checkbox.textContent = isDone ? '☑' : '☐';
+                }
+            }
+
             const items = container.querySelectorAll('.employee-task-checklist-item');
             items.forEach(function (item) {
                 const isAssigned = item.getAttribute('data-is-assigned') === 'yes';
@@ -1239,13 +1311,14 @@
                     const itemId = item.getAttribute('data-item-id');
                     const isDone = item.classList.contains('done');
                     const newState = isDone ? 'incomplete' : 'complete';
+                    const nextDone = newState === 'complete';
+
+                    item.setAttribute('aria-busy', 'true');
+                    setChecklistItemView(item, nextDone);
 
                     try {
                         // Update in Trello
                         await updateEmployeeChecklistItem(cardId, checklistId, itemId, newState);
-
-                        // Apply the same checklist-based auto-move behavior used in admin view.
-                        await autoMoveEmployeeCardByChecklistProgress(cardId);
 
                         // Mirror admin logic: persist checked-by metadata for checklist item.
                         if (newState === 'complete') {
@@ -1253,20 +1326,23 @@
                         } else {
                             clearChecklistCheckedBy(cardId, itemId);
                         }
-                        
-                        // Update UI optimistically
-                        item.classList.toggle('done');
-                        const checkbox = item.querySelector('span:first-child');
-                        if (checkbox) {
-                            checkbox.textContent = newState === 'complete' ? '☑' : '☐';
-                        }
-                        
-                        // Refresh the entire card to sync with admin changes and ensure consistency
-                        await refreshEmployeeCardData(cardId);
-                        await loadEmployeeTasks();
+
+                        // Keep the UI responsive and sync the heavier updates in the background.
+                        void autoMoveEmployeeCardByChecklistProgress(cardId).catch(function (error) {
+                            console.error('Employee auto-move sync failed:', error);
+                        });
+                        void refreshEmployeeCardData(cardId).catch(function (error) {
+                            console.error('Employee card refresh failed:', error);
+                        });
+                        void loadEmployeeTasks().catch(function (error) {
+                            console.error('Employee task reload failed:', error);
+                        });
                         
                     } catch (error) {
+                        setChecklistItemView(item, isDone);
                         alert('Failed to update checklist item. Please try again.');
+                    } finally {
+                        item.style.pointerEvents = '';
                     }
                 });
             });
@@ -1304,7 +1380,7 @@
         }
 
         function setupTaskDetailsOpen() {
-            ['pendingTaskList', 'allTaskList', 'notificationList', 'overviewNotificationList'].forEach(function (containerId) {
+            ['pendingTaskList', 'doneTaskList', 'allTaskList', 'notificationList'].forEach(function (containerId) {
                 const container = document.getElementById(containerId);
                 if (!container) return;
 
@@ -1340,21 +1416,22 @@
             });
         }
 
-        function renderNotifications(tasks) {
-            const notificationTasks = tasks.filter(function (task) {
-                return listStatusTag(task.listName) === 'todo';
-            });
-
-            renderTaskItems('notificationList', notificationTasks);
-            renderTaskItems('overviewNotificationList', notificationTasks.slice(0, 4));
-            document.getElementById('notificationCount').textContent = String(notificationTasks.length);
-        }
-
         function renderDashboard() {
-            document.getElementById('taskCount').textContent = String(state.tasks.length);
-            renderTaskItems('pendingTaskList', state.tasks.slice(0, 6));
+            const activeTasks = state.tasks.filter(function (task) {
+                return taskCompletionTag(task, state.selectedEmployee) !== 'done';
+            });
+            const doneTasks = state.tasks.filter(function (task) {
+                return taskCompletionTag(task, state.selectedEmployee) === 'done';
+            });
+            document.getElementById('taskCount').textContent = String(activeTasks.length);
+            document.getElementById('completedTaskCount').textContent = String(doneTasks.length);
+            document.getElementById('notificationCount').textContent = String(activeTasks.length);
+            document.getElementById('pendingTaskHeading').textContent = 'Pending Task (' + activeTasks.length + ')';
+            document.getElementById('completedTaskHeading').textContent = 'Completed Task (' + doneTasks.length + ')';
+            renderTaskItems('pendingTaskList', activeTasks.slice(0, 6));
+            renderTaskItems('doneTaskList', doneTasks.slice(0, 6));
             renderTaskItems('allTaskList', state.tasks);
-            renderNotifications(state.tasks);
+            renderTaskItems('notificationList', activeTasks.slice(0, 10));
         }
 
         async function loadEmployeeTasks() {
@@ -1417,6 +1494,7 @@
                         if (!isAssigned) return;
 
                         const orderRef = (card.name || '').split(' - ')[0] || card.shortLink || 'TASK';
+                        const badges = card.badges || {};
                         collected.push({
                             cardId: card.id,
                             cardName: card.name || 'Untitled Task',
@@ -1424,7 +1502,9 @@
                             due: card.due,
                             listName: listMap.get(card.idList) || 'Backlog',
                             description: card.desc || '',
-                            checklists: cardChecklists
+                            checklists: cardChecklists,
+                            checkItemTotal: Number(badges.checkItems) || 0,
+                            checkItemComplete: Number(badges.checkItemsChecked) || 0
                         });
                     });
                 });
@@ -1455,7 +1535,9 @@
 
                     tabLinks.forEach(function (l) { l.classList.remove('active'); });
                     Object.values(sections).forEach(function (section) {
-                        section.classList.remove('active');
+                        if (section) {
+                            section.classList.remove('active');
+                        }
                     });
 
                     link.classList.add('active');
