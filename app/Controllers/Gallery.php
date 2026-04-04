@@ -24,32 +24,32 @@ class Gallery extends BaseController
         ]);
     }
 
-    public function index($customerName = null)
-    {
-        if ($customerName === null) {
-            // FOLDER MODE: Group by customer_name
-            $query = $this->db->table('gallery_designs')
-                              ->select('customer_name, COUNT(id) as total')
-                              ->groupBy('customer_name')
-                              ->get();
-
-            $data['folders'] = $query->getResultArray();
-            $data['view_mode'] = 'folders';
-        } else {
-            // CARD MODE: Show specific customer images
-            $customerName = urldecode($customerName);
-            $query = $this->db->table('gallery_designs')
-                              ->where('customer_name', $customerName)
-                              ->orderBy('created_at', 'DESC')
-                              ->get();
-
-            $data['images'] = $query->getResultArray();
-            $data['customer_name'] = $customerName;
-            $data['view_mode'] = 'cards';
-        }
-
-        return view('gallery_view', $data);
+public function index($customer_name = null) {
+    $db = \Config\Database::connect();
+    
+    if ($customer_name === null) {
+        $data['view_mode'] = 'folders';
+        // Fetch folder counts
+        $data['folders'] = $db->query("SELECT customer_name, COUNT(*) as total FROM gallery_designs GROUP BY customer_name")->getResultArray();
+        
+        // NEW: Fetch 5 most recent uploads for the admin
+        $data['recent_uploads'] = $db->table('gallery_designs')
+                                     ->orderBy('created_at', 'DESC')
+                                     ->limit(5)
+                                     ->get()
+                                     ->getResultArray();
+    } else {
+        $data['view_mode'] = 'cards';
+        $data['customer_name'] = $customer_name;
+        $data['images'] = $db->table('gallery_designs')
+                             ->where('customer_name', $customer_name)
+                             ->orderBy('created_at', 'DESC')
+                             ->get()
+                             ->getResultArray();
     }
+
+    return view('gallery_view', $data);
+}
 
     public function upload()
     {

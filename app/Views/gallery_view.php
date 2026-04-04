@@ -341,6 +341,33 @@
                     </button>
                 </div>
 
+                <?php if ($view_mode == 'folders' && !empty($recent_uploads)): ?>
+                    <div class="recent-uploads-section" style="margin-bottom: 35px;">
+                        <h3 style="color: var(--brand-navy); margin-bottom: 15px; font-size: 1.1rem; display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-clock" style="color: var(--brand-gold);"></i> Recent Uploads
+                        </h3>
+                        
+                        <div class="recent-scroll-container" style="display: flex; gap: 18px; overflow-x: auto; padding-bottom: 15px; scrollbar-width: thin;">
+                            <?php foreach ($recent_uploads as $recent): ?>
+                                <div class="recent-card" style="flex: 0 0 240px; background: var(--card); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                                    <div style="height: 120px; overflow: hidden; background: #f0f3f8;">
+                                        <img src="<?= $recent['image_url']; ?>" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" onclick="openModal(this.src)">
+                                    </div>
+                                    <div style="padding: 10px 12px;">
+                                        <p style="margin: 0; font-size: 0.8rem; font-weight: 700; color: var(--brand-navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                            <?= esc($recent['filename']); ?>
+                                        </p>
+                                        <p style="margin: 3px 0 0; font-size: 0.7rem; color: var(--muted); display: flex; justify-content: space-between;">
+                                            <span><i class="fas fa-user"></i> <?= esc($recent['customer_name']); ?></span>
+                                            <span><?= date('M d, H:i', strtotime($recent['created_at'])); ?></span>
+                                        </p>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
                 <div class="gallery-grid" id="galleryGrid">
                     <?php if ($view_mode == 'folders'): ?>
                         <?php foreach ($folders as $f): ?>
