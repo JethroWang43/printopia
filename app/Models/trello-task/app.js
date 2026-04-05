@@ -17,6 +17,72 @@ const activeTaskFilters = {
 
 let currentBoardLists = [];
 let currentChecklistDragItem = null;
+let viewLoadingStartedAt = 0;
+let viewLoadingHideTimer = null;
+
+function setViewLoading(visible, message = 'Preparing task data') {
+    const overlay = document.querySelector('#viewLoadingOverlay');
+    const messageLabel = document.querySelector('#viewLoadingText');
+
+    if (!overlay) {
+        return;
+    }
+
+    if (messageLabel) {
+        messageLabel.textContent = message;
+    }
+
+    if (visible) {
+        viewLoadingStartedAt = Date.now();
+        if (viewLoadingHideTimer) {
+            clearTimeout(viewLoadingHideTimer);
+            viewLoadingHideTimer = null;
+        }
+        overlay.style.display = 'flex';
+        overlay.setAttribute('aria-busy', 'true');
+        return;
+    }
+
+    const elapsed = Date.now() - viewLoadingStartedAt;
+    const minimumVisibleMs = 180;
+    const delay = Math.max(minimumVisibleMs - elapsed, 0);
+
+    if (viewLoadingHideTimer) {
+        clearTimeout(viewLoadingHideTimer);
+    }
+
+    viewLoadingHideTimer = setTimeout(() => {
+        overlay.style.display = 'none';
+        overlay.removeAttribute('aria-busy');
+        viewLoadingHideTimer = null;
+    }, delay);
+}
+
+function bindTabLoadingIndicators() {
+    const tabConfig = [
+        { selector: '#table-tab', label: 'Loading table view...' },
+        { selector: '#kanban-tab', label: 'Loading kanban view...' },
+        { selector: '#calendar-tab', label: 'Loading calendar view...' },
+        { selector: '#calendar-overview-tab', label: 'Loading overview...' }
+    ];
+
+    tabConfig.forEach((config) => {
+        const tabButton = document.querySelector(config.selector);
+        if (!tabButton || tabButton.dataset.loadingBound === 'true') {
+            return;
+        }
+
+        tabButton.dataset.loadingBound = 'true';
+        tabButton.addEventListener('click', () => {
+            setViewLoading(true, config.label);
+        });
+        tabButton.addEventListener('shown.bs.tab', () => {
+            requestAnimationFrame(() => {
+                setViewLoading(false);
+            });
+        });
+    });
+}
 
 function emitHciInteraction(action, payload = {}) {
     const detail = {
@@ -949,6 +1015,7 @@ async function deleteBoard(boardId, boardName) {
 // Select a board and load its cards
 async function selectBoard(boardId, boardName) {
     currentBoardId = boardId;
+    setViewLoading(true, `Loading ${boardName || 'board'}...`);
     
     const pageTitle = document.querySelector('#pageTitle');
     if (pageTitle) {
@@ -991,6 +1058,7 @@ async function selectBoard(boardId, boardName) {
         currentBoardLists = lists.map(list => ({ ...list, cards: [...(list.cards || [])] }));
         initializeFilterMenus(currentBoardLists);
         refreshBoardViewsWithFilters();
+        setViewLoading(false);
 
         const allCards = lists.flatMap(list => list.cards || []);
         Promise.all(
@@ -1010,9 +1078,11 @@ async function selectBoard(boardId, boardName) {
             currentBoardLists = lists.map(list => ({ ...list, cards: [...(list.cards || [])] }));
             refreshBoardViewsWithFilters();
             console.log('Checklist enrichment complete. Board views refreshed.');
+            setViewLoading(false);
         });
     } catch (error) {
         console.error('Error loading board:', error);
+        setViewLoading(false);
     }
 }
 
@@ -2265,6 +2335,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     applyEmbedViewMode();
     setupCalendarTabTelemetry();
     setupCalendarOverviewControls();
+    bindTabLoadingIndicators();
     const addCalendarNoteBtn = document.querySelector('#addCalendarNoteBtn');
     const calendarNotesList = document.querySelector('#calendarNotesList');
     if (addCalendarNoteBtn) {
@@ -3671,6 +3742,8 @@ ${specifications || 'No additional specifications provided.'}
 
 // Show card details modal
 async function showCardDetails(cardId) {
+    let loadingModalElement = null;
+    let loadingModal = null;
     try {
         const existingModal = document.querySelector('#cardDetailsModal');
         if (existingModal) {
@@ -3682,9 +3755,35 @@ async function showCardDetails(cardId) {
         }
         cleanupModalArtifacts();
 
+        const loadingModalHTML = `
+            <div class="modal fade" id="cardDetailsLoadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+                <div class="modal-dialog modal-dialog-centered modal-sm">
+                    <div class="modal-content">
+                        <div class="modal-body text-center py-4">
+                            <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+                            <div class="mt-3 fw-semibold">Loading task details...</div>
+                            <div class="text-muted small">Please wait</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', loadingModalHTML);
+        loadingModalElement = document.querySelector('#cardDetailsLoadingModal');
+        if (loadingModalElement) {
+            loadingModal = new bootstrap.Modal(loadingModalElement);
+            loadingModal.show();
+        }
+
         const card = await trelloAPI(`/cards/${cardId}`);
         
         if (!card) {
+            if (loadingModal) {
+                loadingModal.hide();
+            }
+            if (loadingModalElement) {
+                loadingModalElement.remove();
+            }
             alert('Failed to load card details');
             return;
         }
@@ -3817,6 +3916,14 @@ async function showCardDetails(cardId) {
                 </div>
             </div>
         `;
+
+        if (loadingModal) {
+            loadingModal.hide();
+            loadingModal.dispose();
+        }
+        if (loadingModalElement) {
+            loadingModalElement.remove();
+        }
         
         document.body.insertAdjacentHTML('beforeend', modalHTML);
         const modalElement = document.querySelector('#cardDetailsModal');
@@ -3845,6 +3952,13 @@ async function showCardDetails(cardId) {
             cleanupModalArtifacts();
         });
     } catch (error) {
+        if (loadingModal) {
+            loadingModal.hide();
+            loadingModal.dispose();
+        }
+        if (loadingModalElement) {
+            loadingModalElement.remove();
+        }
         console.error('Error loading card details:', error);
         alert('Error loading card details: ' + error.message);
     }

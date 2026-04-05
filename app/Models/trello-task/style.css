@@ -154,6 +154,29 @@ body.embedded-mode .header {
 .content-area {
     background-color: #f9f9f9;
     overflow-y: auto;
+    position: relative;
+}
+
+.view-loading-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(249, 249, 249, 0.82);
+    backdrop-filter: blur(2px);
+}
+
+.view-loading-card {
+    min-width: 220px;
+    padding: 20px 24px;
+    border-radius: 14px;
+    background: #ffffff;
+    border: 1px solid #dce6f5;
+    box-shadow: 0 12px 28px rgba(25, 51, 96, 0.12);
+    text-align: center;
+    color: #20324d;
 }
 
 /* Fix dropdown menu display */
