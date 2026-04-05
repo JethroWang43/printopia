@@ -194,6 +194,7 @@ function refreshBoardViewsWithFilters() {
     loadTableView(filteredLists);
     loadKanbanView(filteredLists, currentBoardId);
     loadCalendarView(filteredLists);
+    loadCalendarOverviewView(filteredLists);
     emitBoardSummary(filteredLists);
 }
 
@@ -332,8 +333,12 @@ function applyEmbedViewMode() {
     const headerProjectSelect = document.querySelector('#headerProjectSelect');
     const newOrderBtn = document.querySelector('#newOrderBtn');
 
+    // Keep calendar overview tab dedicated to calendar embed mode.
+    setTabVisibility('calendar-overview-tab', 'calendar-overview-view', false);
+
     if (EMBED_VIEW_MODE === 'tasks') {
         setTabVisibility('calendar-tab', 'calendar-view', false);
+        setTabVisibility('calendar-overview-tab', 'calendar-overview-view', false);
         activateTab('table-tab');
         if (actionsSection) actionsSection.style.display = '';
         if (projectSelectWrap) projectSelectWrap.style.display = 'none';
@@ -349,6 +354,7 @@ function applyEmbedViewMode() {
         setTabVisibility('table-tab', 'table-view', false);
         setTabVisibility('kanban-tab', 'kanban-view', false);
         setTabVisibility('calendar-tab', 'calendar-view', true);
+        setTabVisibility('calendar-overview-tab', 'calendar-overview-view', true);
         activateTab('calendar-tab');
 
         if (headerTitle) {
@@ -978,8 +984,16 @@ async function selectBoard(boardId, boardName) {
             list.cards = cardsResults[index] || [];
         });
 
+        // Render dashboard/calendar views immediately from lists+cards,
+        // then enrich with checklists asynchronously to avoid perceived 5s delays.
+        console.log('Cards loaded. Rendering initial board views immediately...');
+
+        currentBoardLists = lists.map(list => ({ ...list, cards: [...(list.cards || [])] }));
+        initializeFilterMenus(currentBoardLists);
+        refreshBoardViewsWithFilters();
+
         const allCards = lists.flatMap(list => list.cards || []);
-        const checklistResults = await Promise.all(
+        Promise.all(
             allCards.map(async card => {
                 try {
                     return await trelloAPI(`/cards/${card.id}/checklists`);
@@ -988,17 +1002,15 @@ async function selectBoard(boardId, boardName) {
                     return [];
                 }
             })
-        );
+        ).then((checklistResults) => {
+            allCards.forEach((card, index) => {
+                card.checklists = checklistResults[index] || [];
+            });
 
-        allCards.forEach((card, index) => {
-            card.checklists = checklistResults[index] || [];
+            currentBoardLists = lists.map(list => ({ ...list, cards: [...(list.cards || [])] }));
+            refreshBoardViewsWithFilters();
+            console.log('Checklist enrichment complete. Board views refreshed.');
         });
-        
-        console.log('All cards loaded and attached to lists');
-        
-        currentBoardLists = lists.map(list => ({ ...list, cards: [...(list.cards || [])] }));
-        initializeFilterMenus(currentBoardLists);
-        refreshBoardViewsWithFilters();
     } catch (error) {
         console.error('Error loading board:', error);
     }
@@ -1550,6 +1562,12 @@ function isSameCalendarDay(date, day, month, year) {
 // Calendar View Functions
 let currentCalendarDate = new Date();
 let calendarCards = [];
+let calendarOverviewRows = [];
+let calendarOverviewSearchQuery = '';
+let calendarOverviewPage = 1;
+let calendarOverviewPageSize = 8;
+let calendarOverviewStatusFilter = 'all';
+let calendarOverviewDueFilter = 'all';
 let currentCalendarNoteDate = '';
 let currentCalendarEditingNoteId = '';
 const CALENDAR_NOTES_STORAGE_KEY = 'calendarPersonalNotes';
@@ -1759,6 +1777,320 @@ function openCalendarNoteEditor(dateValue) {
     });
 }
 
+function getCalendarOverviewStatusClass(status) {
+    const normalized = normalizeListName(status || '');
+    if (normalized.includes('done') || normalized.includes('complete')) {
+        return 'text-bg-success';
+    }
+    if (normalized.includes('review') || normalized.includes('quality')) {
+        return 'text-bg-info';
+    }
+    if (normalized.includes('progress') || normalized.includes('processing') || normalized.includes('printing')) {
+        return 'text-bg-warning';
+    }
+    if (normalized.includes('cancel')) {
+        return 'text-bg-danger';
+    }
+    return 'text-bg-secondary';
+}
+
+function formatOverviewDate(dateValue) {
+    if (!dateValue) return 'No date';
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return 'No date';
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit'
+    });
+}
+
+function rowMatchesOverviewDueFilter(row) {
+    if (calendarOverviewDueFilter === 'all') {
+        return true;
+    }
+
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const nextWeek = new Date(todayStart);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+
+    const dueDate = row.dueDate && !Number.isNaN(row.dueDate.getTime()) ? row.dueDate : null;
+
+    if (calendarOverviewDueFilter === 'withDue') {
+        return Boolean(dueDate);
+    }
+    if (calendarOverviewDueFilter === 'noDue') {
+        return !dueDate;
+    }
+    if (calendarOverviewDueFilter === 'overdue') {
+        return Boolean(dueDate) && dueDate < todayStart;
+    }
+    if (calendarOverviewDueFilter === 'next7') {
+        return Boolean(dueDate) && dueDate >= todayStart && dueDate < nextWeek;
+    }
+
+    return true;
+}
+
+function refreshOverviewStatusFilterOptions() {
+    const statusSelect = document.querySelector('#calendarOverviewStatusFilter');
+    if (!statusSelect) {
+        return;
+    }
+
+    const previousValue = calendarOverviewStatusFilter || statusSelect.value || 'all';
+    const statuses = Array.from(new Set(calendarOverviewRows.map((row) => String(row.listName || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+
+    const optionsHtml = ['<option value="all">All</option>']
+        .concat(statuses.map((status) => `<option value="${escapeHtml(status.toLowerCase())}">${escapeHtml(status)}</option>`))
+        .join('');
+
+    statusSelect.innerHTML = optionsHtml;
+
+    const hasPrevious = previousValue === 'all' || statuses.some((status) => status.toLowerCase() === previousValue);
+    calendarOverviewStatusFilter = hasPrevious ? previousValue : 'all';
+    statusSelect.value = calendarOverviewStatusFilter;
+}
+
+function getFilteredCalendarOverviewRows() {
+    const query = String(calendarOverviewSearchQuery || '').trim().toLowerCase();
+    return calendarOverviewRows.filter((row) => {
+        const statusValue = String(row.listName || '').toLowerCase();
+        const statusMatch = calendarOverviewStatusFilter === 'all' || statusValue === calendarOverviewStatusFilter;
+        const dueMatch = rowMatchesOverviewDueFilter(row);
+        const taskName = String(row.name || '').toLowerCase();
+        const status = statusValue;
+        const dueDate = formatOverviewDate(row.dueDate).toLowerCase();
+        const createdDate = formatOverviewDate(row.createdDate).toLowerCase();
+        const queryMatch = !query || taskName.includes(query) || status.includes(query) || dueDate.includes(query) || createdDate.includes(query);
+        return statusMatch && dueMatch && queryMatch;
+    });
+}
+
+function renderCalendarOverviewList() {
+    const listContainer = document.querySelector('#calendarOverviewList');
+    const stats = document.querySelector('#calendarOverviewStats');
+    const pageInfo = document.querySelector('#calendarOverviewPageInfo');
+    const prevBtn = document.querySelector('#calendarOverviewPrev');
+    const nextBtn = document.querySelector('#calendarOverviewNext');
+
+    if (!listContainer) {
+        return;
+    }
+
+    const filteredRows = getFilteredCalendarOverviewRows();
+    const totalRows = filteredRows.length;
+    const totalPages = Math.max(1, Math.ceil(totalRows / calendarOverviewPageSize));
+    if (calendarOverviewPage > totalPages) {
+        calendarOverviewPage = totalPages;
+    }
+
+    const startIndex = (calendarOverviewPage - 1) * calendarOverviewPageSize;
+    const pagedRows = filteredRows.slice(startIndex, startIndex + calendarOverviewPageSize);
+
+    if (stats) {
+        stats.textContent = `${totalRows} task${totalRows === 1 ? '' : 's'}`;
+    }
+
+    if (pageInfo) {
+        pageInfo.textContent = `Page ${calendarOverviewPage} of ${totalPages}`;
+    }
+    if (prevBtn) {
+        prevBtn.disabled = calendarOverviewPage <= 1;
+    }
+    if (nextBtn) {
+        nextBtn.disabled = calendarOverviewPage >= totalPages;
+    }
+
+    if (!totalRows) {
+        const noResultsText = calendarOverviewSearchQuery
+            ? 'No tasks match your search.'
+            : 'No tasks found for this project.';
+        listContainer.innerHTML = `<div class="text-muted py-4 text-center">${noResultsText}</div>`;
+        return;
+    }
+
+    listContainer.innerHTML = pagedRows.map((row) => {
+        const statusClass = getCalendarOverviewStatusClass(row.listName);
+        return `
+            <div class="calendar-overview-item" role="button" tabindex="0" onclick="showCardDetails('${row.id}')" onkeydown="if(event.key==='Enter'){showCardDetails('${row.id}')}">
+                <div class="calendar-overview-task" title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</div>
+                <div class="calendar-overview-date">
+                    <span class="label">Due Date</span>
+                    ${escapeHtml(formatOverviewDate(row.dueDate))}
+                </div>
+                <div class="calendar-overview-date">
+                    <span class="label">Created</span>
+                    ${escapeHtml(formatOverviewDate(row.createdDate))}
+                </div>
+                <div class="calendar-overview-status">
+                    <span class="badge ${statusClass}">${escapeHtml(row.listName || 'Unknown')}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function setupCalendarOverviewControls() {
+    const searchInput = document.querySelector('#calendarOverviewSearch');
+    const statusFilterSelect = document.querySelector('#calendarOverviewStatusFilter');
+    const dueFilterSelect = document.querySelector('#calendarOverviewDueFilter');
+    const pageSizeSelect = document.querySelector('#calendarOverviewPageSize');
+    const prevBtn = document.querySelector('#calendarOverviewPrev');
+    const nextBtn = document.querySelector('#calendarOverviewNext');
+
+    if (searchInput && searchInput.dataset.bound !== 'true') {
+        searchInput.dataset.bound = 'true';
+        searchInput.addEventListener('input', () => {
+            calendarOverviewSearchQuery = searchInput.value || '';
+            calendarOverviewPage = 1;
+            renderCalendarOverviewList();
+            emitHciInteraction('calendar_overview_search_changed', {
+                queryLength: calendarOverviewSearchQuery.trim().length,
+                boardId: currentBoardId
+            });
+        });
+    }
+
+    if (statusFilterSelect && statusFilterSelect.dataset.bound !== 'true') {
+        statusFilterSelect.dataset.bound = 'true';
+        statusFilterSelect.addEventListener('change', () => {
+            calendarOverviewStatusFilter = statusFilterSelect.value || 'all';
+            calendarOverviewPage = 1;
+            renderCalendarOverviewList();
+            emitHciInteraction('calendar_overview_filter_changed', {
+                type: 'status',
+                value: calendarOverviewStatusFilter,
+                boardId: currentBoardId
+            });
+        });
+    }
+
+    if (dueFilterSelect && dueFilterSelect.dataset.bound !== 'true') {
+        dueFilterSelect.dataset.bound = 'true';
+        dueFilterSelect.addEventListener('change', () => {
+            calendarOverviewDueFilter = dueFilterSelect.value || 'all';
+            calendarOverviewPage = 1;
+            renderCalendarOverviewList();
+            emitHciInteraction('calendar_overview_filter_changed', {
+                type: 'due',
+                value: calendarOverviewDueFilter,
+                boardId: currentBoardId
+            });
+        });
+    }
+
+    if (pageSizeSelect && pageSizeSelect.dataset.bound !== 'true') {
+        pageSizeSelect.dataset.bound = 'true';
+        pageSizeSelect.addEventListener('change', () => {
+            const size = parseInt(pageSizeSelect.value, 10);
+            calendarOverviewPageSize = Number.isFinite(size) && size > 0 ? size : 8;
+            calendarOverviewPage = 1;
+            renderCalendarOverviewList();
+            emitHciInteraction('calendar_overview_page_size_changed', {
+                pageSize: calendarOverviewPageSize,
+                boardId: currentBoardId
+            });
+        });
+    }
+
+    if (prevBtn && prevBtn.dataset.bound !== 'true') {
+        prevBtn.dataset.bound = 'true';
+        prevBtn.addEventListener('click', () => {
+            if (calendarOverviewPage <= 1) return;
+            calendarOverviewPage -= 1;
+            renderCalendarOverviewList();
+            emitHciInteraction('calendar_overview_page_changed', {
+                page: calendarOverviewPage,
+                boardId: currentBoardId
+            });
+        });
+    }
+
+    if (nextBtn && nextBtn.dataset.bound !== 'true') {
+        nextBtn.dataset.bound = 'true';
+        nextBtn.addEventListener('click', () => {
+            const totalRows = getFilteredCalendarOverviewRows().length;
+            const totalPages = Math.max(1, Math.ceil(totalRows / calendarOverviewPageSize));
+            if (calendarOverviewPage >= totalPages) return;
+            calendarOverviewPage += 1;
+            renderCalendarOverviewList();
+            emitHciInteraction('calendar_overview_page_changed', {
+                page: calendarOverviewPage,
+                boardId: currentBoardId
+            });
+        });
+    }
+}
+
+function loadCalendarOverviewView(lists) {
+    const rows = [];
+    (lists || []).forEach((list) => {
+        (list.cards || []).forEach((card) => {
+            const cardWithList = {
+                ...card,
+                listName: list.name
+            };
+            if (!isCardVisibleToCurrentEmployee(cardWithList)) {
+                return;
+            }
+
+            const createdDate = getCardCreatedDate(card.id);
+            const dueDate = card.due ? new Date(card.due) : null;
+            const rankingDate = dueDate && !Number.isNaN(dueDate.getTime()) ? dueDate : createdDate;
+
+            rows.push({
+                id: card.id,
+                name: card.name,
+                listName: list.name,
+                createdDate,
+                dueDate,
+                rankingDate
+            });
+        });
+    });
+
+    rows.sort((a, b) => {
+        const aTime = a.rankingDate && !Number.isNaN(a.rankingDate.getTime()) ? a.rankingDate.getTime() : Number.MAX_SAFE_INTEGER;
+        const bTime = b.rankingDate && !Number.isNaN(b.rankingDate.getTime()) ? b.rankingDate.getTime() : Number.MAX_SAFE_INTEGER;
+        return aTime - bTime;
+    });
+
+    calendarOverviewRows = rows;
+    refreshOverviewStatusFilterOptions();
+    renderCalendarOverviewList();
+
+    emitHciInteraction('calendar_overview_rendered', {
+        taskCount: rows.length,
+        boardId: currentBoardId,
+        filtered: Boolean(calendarOverviewSearchQuery)
+    });
+}
+
+function setupCalendarTabTelemetry() {
+    const calendarTab = document.querySelector('#calendar-tab');
+    const overviewTab = document.querySelector('#calendar-overview-tab');
+
+    if (calendarTab) {
+        calendarTab.addEventListener('shown.bs.tab', () => {
+            emitHciInteraction('calendar_tab_changed', { tab: 'calendar' });
+        });
+        calendarTab.addEventListener('click', () => {
+            emitHciInteraction('calendar_tab_click', { tab: 'calendar' });
+        });
+    }
+
+    if (overviewTab) {
+        overviewTab.addEventListener('shown.bs.tab', () => {
+            emitHciInteraction('calendar_tab_changed', { tab: 'overview' });
+        });
+        overviewTab.addEventListener('click', () => {
+            emitHciInteraction('calendar_tab_click', { tab: 'overview' });
+        });
+    }
+}
+
 function loadCalendarView(lists) {
     calendarCards = [];
     lists.forEach(list => {
@@ -1931,6 +2263,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     applyEmbedViewMode();
+    setupCalendarTabTelemetry();
+    setupCalendarOverviewControls();
     const addCalendarNoteBtn = document.querySelector('#addCalendarNoteBtn');
     const calendarNotesList = document.querySelector('#calendarNotesList');
     if (addCalendarNoteBtn) {

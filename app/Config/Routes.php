@@ -14,6 +14,8 @@ $routes->get('contact', 'Contact::index');
 $routes->get('custom-order', 'Index::customOrder');
 $routes->get('admin', 'Admin::index');
 $routes->get('employee', 'Employee::index');
+$routes->get('admin/gallery/files', 'Admin::galleryFiles');
+$routes->get('admin/gallery/file/(:any)', 'Admin::galleryFile/$1');
 
 // Trello task management embedded app
 $routes->get('trello-task/index.html', 'Admin::trelloTaskIndex');
@@ -35,6 +37,10 @@ $routes->get('printopia/admin', 'Admin::index');
 $routes->get('Printopia/admin', 'Admin::index');
 $routes->get('printopia/employee', 'Employee::index');
 $routes->get('Printopia/employee', 'Employee::index');
+$routes->get('printopia/admin/gallery/files', 'Admin::galleryFiles');
+$routes->get('Printopia/admin/gallery/files', 'Admin::galleryFiles');
+$routes->get('printopia/admin/gallery/file/(:any)', 'Admin::galleryFile/$1');
+$routes->get('Printopia/admin/gallery/file/(:any)', 'Admin::galleryFile/$1');
 
 $routes->get('printopia/trello-task/index.html', 'Admin::trelloTaskIndex');
 $routes->get('Printopia/trello-task/index.html', 'Admin::trelloTaskIndex');

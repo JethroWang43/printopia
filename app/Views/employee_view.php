@@ -80,15 +80,23 @@
             color: #2f3857;
             font-weight: 600;
             font-size: 0.95rem;
-            border: 1px solid transparent;
-            transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+            border-left: 3px solid transparent;
+            transition: all 0.16s ease;
         }
 
-        .menu li a.active,
+        .menu li a.active {
+            background: linear-gradient(90deg, #e8f1ff 0%, #f2f6ff 100%);
+            color: #152a5e;
+            border-left-color: #1e91d6;
+            border-color: #dde6f7;
+            box-shadow: inset 0 2px 8px rgba(30, 145, 214, 0.08);
+        }
+
         .menu li a:hover {
             background: #f2f6ff;
             color: #152a5e;
             border-color: #dde6f7;
+            border-left-color: #b8d7f5;
             transform: translateX(2px);
         }
 
@@ -131,6 +139,31 @@
 
         .tab-section.active {
             display: grid;
+        }
+
+        .task-frame-panel {
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            padding: 0;
+            box-shadow: none;
+        }
+
+        .task-frame-panel h3 {
+            margin: 0 0 8px;
+            color: #1f2430;
+            font-size: 1.5rem;
+        }
+
+        .task-embed {
+            width: 100%;
+            min-height: 680px;
+            height: 78vh;
+            border: 1px solid #d6dfef;
+            border-radius: 12px;
+            background: #ffffff;
+            display: block;
+            box-shadow: 0 12px 22px rgba(16, 34, 79, 0.08);
         }
 
         .panel-empty {
@@ -453,7 +486,8 @@
         }
 
         .tag.pending {
-            background: var(--warning);
+            background: linear-gradient(180deg, #f4b324 0%, #d89209 100%);
+            box-shadow: 0 4px 10px rgba(212, 146, 9, 0.3);
         }
 
         .tag.todo {
@@ -587,17 +621,26 @@
                     <li><a href="#" data-tab="overview" class="active">Dashboard Overview</a></li>
                     <li><a href="#" data-tab="tasks">Task</a></li>
                     <li><a href="#" data-tab="notifications">Notification</a></li>
+                    <li><a href="#" data-tab="notification-management" style="display:none;">Notification Management</a></li>
+                    <li><a href="#" data-tab="calendar-management" style="display:none;">Calendar</a></li>
+                    <li><a href="#" data-tab="gallery-management" style="display:none;">Gallery Management</a></li>
+                    <li><a href="#" data-tab="order-management" style="display:none;">Order Management</a></li>
+                    <li><a href="#" data-tab="inventory-management" style="display:none;">Inventory Management</a></li>
+                    <li><a href="#" data-tab="account-management" style="display:none;">Account Management</a></li>
+                    <li><a href="#" data-tab="task-management" style="display:none;">Task Management</a></li>
+                    <li><a href="#" data-tab="discount-management" style="display:none;">Discount Management</a></li>
+                    <li><a href="#" data-tab="control-management" style="display:none;">Control Management</a></li>
                 </ul>
 
                 <div class="employee-picker">
                     <label for="employeeFilter">Sample Employee</label>
                     <select id="employeeFilter">
-                        <option value="john">John (Sample Employee)</option>
-                        <option value="maria">Maria</option>
-                        <option value="james">James</option>
-                        <option value="emily">Emily</option>
-                        <option value="michael">Michael</option>
-                        <option value="sarah">Sarah</option>
+                        <option value="john" data-employee-name="John Smith" data-employee-role="operator">John (Sample Employee)</option>
+                        <option value="maria" data-employee-name="Maria Garcia" data-employee-role="designer">Maria</option>
+                        <option value="james" data-employee-name="James Wilson" data-employee-role="quality-control">James</option>
+                        <option value="emily" data-employee-name="Emily Chen" data-employee-role="production-manager">Emily</option>
+                        <option value="michael" data-employee-name="Michael Brown" data-employee-role="finishing-specialist">Michael</option>
+                        <option value="sarah" data-employee-name="Sarah Davis" data-employee-role="customer-service">Sarah</option>
                     </select>
                     <div class="status-msg" id="employeeStatusMsg">Loading tasks from Trello...</div>
                 </div>
@@ -671,6 +714,42 @@
                     </article>
                 </div>
 
+                <div class="tab-section" id="tab-calendar-management">
+                    <?= view('admin_tab/calendar_tab'); ?>
+                </div>
+
+                <div class="tab-section" id="tab-notification-management">
+                    <?= view('admin_tab/notification_tab'); ?>
+                </div>
+
+                <div class="tab-section" id="tab-gallery-management">
+                    <?= view('admin_tab/gallery_tab'); ?>
+                </div>
+
+                <div class="tab-section" id="tab-order-management">
+                    <?= view('admin_tab/order_tab'); ?>
+                </div>
+
+                <div class="tab-section" id="tab-inventory-management">
+                    <?= view('admin_tab/inventory_tab'); ?>
+                </div>
+
+                <div class="tab-section" id="tab-account-management">
+                    <?= view('admin_tab/account_tab'); ?>
+                </div>
+
+                <div class="tab-section" id="tab-task-management">
+                    <?= view('admin_tab/task_tab'); ?>
+                </div>
+
+                <div class="tab-section" id="tab-discount-management">
+                    <?= view('admin_tab/discount_tab'); ?>
+                </div>
+
+                <div class="tab-section" id="tab-control-management">
+                    <?= view('admin_tab/control_tab'); ?>
+                </div>
+
             </section>
         </div>
     </main>
@@ -693,11 +772,58 @@
         const TRELLO_API_KEY = (window.APP_ENV && window.APP_ENV.TRELLO_API_KEY) || '';
         const TRELLO_TOKEN = localStorage.getItem('trelloToken') || ((window.APP_ENV && window.APP_ENV.DEFAULT_TOKEN) || '');
         const CHECKED_BY_STORAGE_KEY = 'checklistCheckedBy';
+        const CONTROL_SETTINGS_KEY = 'printopiaControlSettingsV1';
 
         const state = {
             selectedEmployee: 'john',
             tasks: []
         };
+
+        function normalizeEmployeeName(value) {
+            return normalize(value).replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+
+        function getCurrentEmployeeName() {
+            const employeeFilter = document.getElementById('employeeFilter');
+            if (!employeeFilter) {
+                return normalizeEmployeeName(state.selectedEmployee);
+            }
+
+            const option = employeeFilter.options[employeeFilter.selectedIndex];
+            return normalizeEmployeeName(option?.dataset.employeeName || option?.textContent || state.selectedEmployee);
+        }
+
+        function getCalendarAssignments() {
+            try {
+                const raw = JSON.parse(localStorage.getItem(CONTROL_SETTINGS_KEY) || '{}');
+                return raw?.adminEmployeeAccess?.['calendar-management'] || {};
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function getAdminEmployeeAssignments() {
+            try {
+                const raw = JSON.parse(localStorage.getItem(CONTROL_SETTINGS_KEY) || '{}');
+                return raw?.adminEmployeeAccess || {};
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function getAssignedAdminTabsForCurrentEmployee() {
+            const currentEmployee = getCurrentEmployeeName();
+            const assignments = getAdminEmployeeAssignments();
+            return Object.entries(assignments)
+                .filter(([, map]) => map && map[currentEmployee])
+                .map(([sectionKey]) => sectionKey);
+        }
+
+        function isCalendarAllowedForCurrentEmployee() {
+            const assignments = getCalendarAssignments();
+            const currentEmployee = getCurrentEmployeeName();
+            return Boolean(assignments[currentEmployee]);
+        }
 
         function esc(text) {
             return String(text || '').replace(/[&<>"']/g, function (m) {
@@ -1361,18 +1487,108 @@
             }
         }
 
+        function getEmployeeTabControls() {
+            try {
+                const raw = JSON.parse(localStorage.getItem(CONTROL_SETTINGS_KEY) || '{}');
+                return {
+                    overview: raw?.employeeTabs?.overview !== false,
+                    tasks: raw?.employeeTabs?.tasks !== false,
+                    notifications: raw?.employeeTabs?.notifications !== false,
+                    assignedAdminTabs: getAssignedAdminTabsForCurrentEmployee(),
+                };
+            } catch (error) {
+                return {
+                    overview: true,
+                    tasks: true,
+                    notifications: true,
+                    assignedAdminTabs: [],
+                };
+            }
+        }
+
+        function getEmployeeGeneralSettings() {
+            try {
+                const raw = JSON.parse(localStorage.getItem(CONTROL_SETTINGS_KEY) || '{}');
+                const enabled = raw?.generalSettings?.employeeAutoRefreshEnabled !== false;
+                const parsedInterval = Number(raw?.generalSettings?.employeeAutoRefreshIntervalSec);
+                const safeIntervalSec = Math.max(10, Math.min(300, Number.isFinite(parsedInterval) ? parsedInterval : 30));
+                return {
+                    autoRefreshEnabled: enabled,
+                    autoRefreshIntervalMs: safeIntervalSec * 1000,
+                };
+            } catch (error) {
+                return {
+                    autoRefreshEnabled: true,
+                    autoRefreshIntervalMs: 30000,
+                };
+            }
+        }
+
+        function applyEmployeeTabControls() {
+            const tabMenu = document.getElementById('employeeTabMenu');
+            if (!tabMenu) return;
+
+            const controls = getEmployeeTabControls();
+            const tabLinks = tabMenu.querySelectorAll('a[data-tab]');
+            const assignedSet = new Set(controls.assignedAdminTabs || []);
+
+            tabLinks.forEach(function (link) {
+                const tab = link.dataset.tab;
+                const isDefaultTab = tab === 'overview' || tab === 'tasks' || tab === 'notifications';
+                const allowed = isDefaultTab ? controls[tab] !== false : assignedSet.has(tab);
+                link.style.display = allowed ? '' : 'none';
+                link.parentElement.style.display = allowed ? '' : 'none';
+
+                const section = document.getElementById('tab-' + tab);
+                if (section) {
+                    section.style.display = allowed ? '' : 'none';
+                }
+            });
+
+            const activeLink = Array.from(tabLinks).find(function (link) {
+                return link.classList.contains('active') && link.parentElement.style.display !== 'none';
+            });
+
+            if (!activeLink) {
+                const firstVisible = Array.from(tabLinks).find(function (link) {
+                    return link.parentElement.style.display !== 'none';
+                });
+
+                if (firstVisible) {
+                    firstVisible.click();
+                }
+            }
+        }
+
         function setupTabs() {
             const tabLinks = document.querySelectorAll('#employeeTabMenu a[data-tab]');
-            const sections = {
-                overview: document.getElementById('tab-overview'),
-                tasks: document.getElementById('tab-tasks'),
-                notifications: document.getElementById('tab-notifications')
+            const sections = {};
+            document.querySelectorAll('.tab-section[id^="tab-"]').forEach(function (section) {
+                const key = section.id.replace(/^tab-/, '');
+                sections[key] = section;
+            });
+
+            const hydrateTabEmbeds = (tab) => {
+                const section = sections[tab];
+                if (!section) {
+                    return;
+                }
+
+                section.querySelectorAll('iframe[data-src]').forEach(function (frame) {
+                    if (frame.src === 'about:blank' && frame.dataset.src) {
+                        frame.src = frame.dataset.src;
+                    }
+                });
             };
 
             tabLinks.forEach(function (link) {
                 link.addEventListener('click', function (event) {
                     event.preventDefault();
                     const tab = link.dataset.tab;
+
+                    if (link.parentElement.style.display === 'none') {
+                        return;
+                    }
 
                     tabLinks.forEach(function (l) { l.classList.remove('active'); });
                     Object.values(sections).forEach(function (section) {
@@ -1385,30 +1601,65 @@
                     if (sections[tab]) {
                         sections[tab].classList.add('active');
                     }
+
+                    hydrateTabEmbeds(tab);
                 });
             });
+
+            const activeLink = Array.from(tabLinks).find(function (link) {
+                return link.classList.contains('active');
+            });
+            if (activeLink?.dataset.tab) {
+                hydrateTabEmbeds(activeLink.dataset.tab);
+            }
         }
 
         function setupEmployeeFilter() {
             const employeeFilter = document.getElementById('employeeFilter');
             employeeFilter.addEventListener('change', async function () {
                 state.selectedEmployee = employeeFilter.value;
+                applyEmployeeTabControls();
                 await loadEmployeeTasks();
             });
         }
 
+        let employeeRefreshTimer = null;
+
+        function applyEmployeeRefreshControls() {
+            const settings = getEmployeeGeneralSettings();
+            if (employeeRefreshTimer) {
+                clearInterval(employeeRefreshTimer);
+                employeeRefreshTimer = null;
+            }
+
+            if (!settings.autoRefreshEnabled) {
+                return;
+            }
+
+            employeeRefreshTimer = setInterval(async function () {
+                console.log('Auto-refreshing employee tasks data...');
+                await loadEmployeeTasks();
+            }, settings.autoRefreshIntervalMs);
+        }
+
         document.addEventListener('DOMContentLoaded', async function () {
             setupTabs();
+            applyEmployeeTabControls();
             setupEmployeeFilter();
             setupTaskDetailsOpen();
             await loadEmployeeTasks();
-            
-            // Setup periodic refresh to sync with admin changes
-            // Refresh every 30 seconds to keep data fresh while not overwhelming the API
-            setInterval(async function () {
-                console.log('Auto-refreshing employee tasks data...');
-                await loadEmployeeTasks();
-            }, 30000);
+            applyEmployeeRefreshControls();
+
+            window.addEventListener('storage', function (event) {
+                if (event.key === CONTROL_SETTINGS_KEY) {
+                    applyEmployeeTabControls();
+                    applyEmployeeRefreshControls();
+                }
+            });
+
+            document.addEventListener('printopia:controls-updated', function () {
+                applyEmployeeTabControls();
+            });
         });
     </script>
 </body>

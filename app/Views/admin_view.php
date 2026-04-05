@@ -97,12 +97,21 @@
             color: #2f3857;
             font-weight: 600;
             font-size: 0.95rem;
+            border-left: 3px solid transparent;
+            transition: all 0.2s ease;
         }
 
-        .menu li a.active,
+        .menu li a.active {
+            background: linear-gradient(90deg, #e8f1ff 0%, #f3f6fc 100%);
+            color: #1a2b5f;
+            border-left-color: #1e91d6;
+            box-shadow: inset 0 2px 8px rgba(30, 145, 214, 0.1);
+        }
+
         .menu li a:hover {
             background: #f3f6fc;
             color: #152a5e;
+            border-left-color: #d0e4f7;
         }
 
         .content {
@@ -116,6 +125,60 @@
 
         .content-section.active {
             display: block;
+        }
+
+        #dashboard-overview {
+            position: relative;
+            min-height: 420px;
+        }
+
+        .dashboard-loading-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 12;
+            background: rgba(245, 249, 255, 0.92);
+            border: 1px solid #d9e4f4;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: all;
+            transition: opacity 220ms ease, visibility 220ms ease;
+        }
+
+        .dashboard-loading-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .dashboard-loading-card {
+            min-width: 240px;
+            display: grid;
+            place-items: center;
+            gap: 10px;
+            padding: 18px 20px;
+            border: 1px solid #cfe0f5;
+            border-radius: 10px;
+            background: #ffffff;
+            box-shadow: 0 8px 16px rgba(16, 34, 79, 0.08);
+            color: #29416d;
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        .dashboard-loading-spinner {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 3px solid #d7e4f7;
+            border-top-color: #2a80c7;
+            animation: dashboardSpin 800ms linear infinite;
+        }
+
+        @keyframes dashboardSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
         .stats {
@@ -168,23 +231,29 @@
             font-size: 1.22rem;
         }
 
+        .recent-orders-shell {
+            border: 1px solid #b8d7eb;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #ffffff;
+        }
+
         .table-head {
             display: grid;
             grid-template-columns: repeat(5, minmax(0, 1fr));
             gap: 8px;
-            border: 1px solid #b8d7eb;
-            border-radius: 8px;
+            border-bottom: 1px solid #b8d7eb;
             padding: 10px 12px;
+            margin: 0;
             color: #5a637d;
             font-size: 0.88rem;
             font-weight: 600;
+            background: #f9fbff;
         }
 
         .table-body {
-            margin-top: 8px;
+            margin-top: 0;
             min-height: 320px;
-            border: 1px solid #b8d7eb;
-            border-radius: 8px;
             background: #f9fbff;
             display: grid;
             place-items: center;
@@ -220,6 +289,7 @@
             height: 100%;
             background: #7dc0e8;
             width: 0;
+            transition: width 700ms cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         .inventory-list {
@@ -323,13 +393,13 @@
                     <li><a href="#" class="active" data-section="dashboard-overview">Dashboard Overview</a></li>
                     <li><a href="#" data-section="notification-management">Notification</a></li>
                     <li><a href="#" data-section="calendar-management">Calendar</a></li>
-                    <li><a href="#">Gallery Management</a></li>
+                    <li><a href="#" data-section="gallery-management">Gallery Management</a></li>
                     <li><a href="#" data-section="order-management">Order Management</a></li>
                     <li><a href="#" data-section="inventory-management">Inventory Management</a></li>
-                    <li><a href="#">Account Management</a></li>
+                    <li><a href="#" data-section="account-management">Account Management</a></li>
                     <li><a href="#" data-section="task-management">Task Management</a></li>
                     <li><a href="#" data-section="discount-management">Discount</a></li>
-                    <li><a href="#">Control Management</a></li>
+                    <li><a href="#" data-section="control-management">Control Management</a></li>
                 </ul>
             </aside>
 
@@ -337,6 +407,13 @@
 
             <section class="content">
                 <div id="dashboard-overview" class="content-section active">
+                    <div class="dashboard-loading-overlay" id="dashboardLoadingOverlay" aria-live="polite" aria-busy="true">
+                        <div class="dashboard-loading-card">
+                            <div class="dashboard-loading-spinner" aria-hidden="true"></div>
+                            <span id="dashboardLoadingText">Loading dashboard data...</span>
+                        </div>
+                    </div>
+
                     <div class="stats">
                         <article class="stat">
                             <h5>Orders</h5>
@@ -352,21 +429,23 @@
                         </article>
                         <article class="stat">
                             <h5>Calendar</h5>
-                            <strong>0</strong>
+                            <strong id="calendarCount">0</strong>
                         </article>
                     </div>
 
                     <div class="panels">
                         <article class="panel">
                             <h3>Recent Orders</h3>
-                            <div class="table-head">
-                                <span>Orders</span>
-                                <span>Customer</span>
-                                <span>Status</span>
-                                <span>Total</span>
-                                <span>Created</span>
+                            <div class="recent-orders-shell">
+                                <div class="table-head">
+                                    <span>Orders</span>
+                                    <span>Customer</span>
+                                    <span>Status</span>
+                                    <span>Total</span>
+                                    <span>Created</span>
+                                </div>
+                                <div class="table-body">No orders yet.</div>
                             </div>
-                            <div class="table-body">No orders yet.</div>
                         </article>
 
                         <div class="content">
@@ -415,13 +494,19 @@
 
                 <?= view('admin_tab/notification_tab'); ?>
 
+                <?= view('admin_tab/gallery_tab'); ?>
+
                 <?= view('admin_tab/order_tab'); ?>
+
+                <?= view('admin_tab/account_tab'); ?>
 
                 <?= view('admin_tab/Inventory_tab'); ?>
 
                 <?= view('admin_tab/discount_tab'); ?>
 
                 <?= view('admin_tab/task_tab'); ?>
+
+                <?= view('admin_tab/control_tab'); ?>
 
                 <iframe
                     id="task-summary-loader"
@@ -461,10 +546,136 @@
             const taskFrame = document.querySelector('#task-management-frame');
             const taskSummaryLoader = document.querySelector('#task-summary-loader');
             const calendarFrame = document.querySelector('#calendar-management-frame');
+            const calendarCountEl = document.querySelector('#calendarCount');
+            const dashboardLoadingOverlay = document.querySelector('#dashboardLoadingOverlay');
+            const dashboardLoadingText = document.querySelector('#dashboardLoadingText');
             const dashboardGrid = document.querySelector('.dashboard-grid');
             const sidebarHideBtn = document.querySelector('#sidebar-hide-btn');
             const sidebarShowBtn = document.querySelector('#sidebar-show-btn');
             const sidebarStateKey = 'adminSidebarHidden';
+            const controlSettingsKey = 'printopiaControlSettingsV1';
+            let dashboardSummaryReceived = false;
+
+            const setDashboardLoading = (isLoading, text) => {
+                if (!dashboardLoadingOverlay) {
+                    return;
+                }
+
+                dashboardLoadingOverlay.classList.toggle('hidden', !isLoading);
+                dashboardLoadingOverlay.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+                if (dashboardLoadingText && text) {
+                    dashboardLoadingText.textContent = text;
+                }
+            };
+
+            const normalize = (value) => String(value || '').trim().toLowerCase();
+            const normalizeEmployeeKey = (value) => normalize(value).replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+            const currentViewerRole = 'admin';
+
+            const currentViewerName = normalizeEmployeeKey(
+                new URLSearchParams(window.location.search).get('employee') ||
+                new URLSearchParams(window.location.search).get('name') ||
+                localStorage.getItem('printopiaCurrentUserName') ||
+                ''
+            );
+
+            const defaultControlSettings = {
+                adminSections: {
+                    'notification-management': true,
+                    'calendar-management': true,
+                    'gallery-management': true,
+                    'order-management': true,
+                    'inventory-management': true,
+                    'account-management': true,
+                    'task-management': true,
+                    'discount-management': true,
+                    'control-management': true,
+                },
+                adminEmployeeAccess: {
+                    'notification-management': {},
+                    'calendar-management': {},
+                    'gallery-management': {},
+                    'order-management': {},
+                    'inventory-management': {},
+                    'account-management': {},
+                    'task-management': {},
+                    'discount-management': {},
+                    'control-management': {},
+                },
+                employeeTabs: {
+                    overview: true,
+                    tasks: true,
+                    notifications: true,
+                }
+            };
+
+            const loadControlSettings = () => {
+                try {
+                    const raw = JSON.parse(localStorage.getItem(controlSettingsKey) || '{}');
+                    return {
+                        ...defaultControlSettings,
+                        adminSections: {
+                            ...defaultControlSettings.adminSections,
+                            ...(raw.adminSections || {}),
+                        },
+                        adminEmployeeAccess: Object.keys(defaultControlSettings.adminEmployeeAccess).reduce((acc, sectionKey) => {
+                            acc[sectionKey] = {
+                                ...defaultControlSettings.adminEmployeeAccess[sectionKey],
+                                ...(raw?.adminEmployeeAccess?.[sectionKey] || {}),
+                            };
+                            return acc;
+                        }, {}),
+                        employeeTabs: {
+                            ...defaultControlSettings.employeeTabs,
+                            ...(raw.employeeTabs || {}),
+                        }
+                    };
+                } catch (error) {
+                    return defaultControlSettings;
+                }
+            };
+
+            const applyControlSettings = () => {
+                const settings = loadControlSettings();
+                const sectionStates = settings.adminSections || {};
+
+                if (currentViewerRole === 'admin') {
+                    links.forEach((link) => {
+                        link.parentElement.style.display = '';
+                    });
+
+                    return;
+                }
+
+                Object.entries(sectionStates).forEach(([sectionId, isEnabled]) => {
+                    const link = document.querySelector(`.menu a[data-section="${sectionId}"]`);
+                    const section = document.getElementById(sectionId);
+                    const employeeAccessMap = settings?.adminEmployeeAccess?.[sectionId] || {};
+                    const assignedEmployees = Object.keys(employeeAccessMap).filter((employeeKey) => employeeAccessMap[employeeKey]);
+                    const employeeAllowed = currentViewerRole === 'admin' || assignedEmployees.includes(currentViewerName);
+                    const visible = Boolean(isEnabled) && employeeAllowed;
+
+                    if (link) {
+                        link.parentElement.style.display = visible ? '' : 'none';
+                    }
+
+                    if (section && !visible) {
+                        section.classList.remove('active');
+                    }
+                });
+
+                const activeVisibleLink = Array.from(links).find((link) => {
+                    return link.classList.contains('active') && link.parentElement.style.display !== 'none';
+                });
+
+                if (!activeVisibleLink) {
+                    const fallbackLink = document.querySelector('.menu a[data-section="dashboard-overview"]');
+                    if (fallbackLink) {
+                        openSection('dashboard-overview', fallbackLink);
+                    }
+                }
+            };
 
             const applySidebarState = (isHidden) => {
                 if (!dashboardGrid || !sidebarShowBtn) {
@@ -480,6 +691,11 @@
                 const statuses = ['pending', 'processing', 'completed', 'cancelled'];
                 const counts = summary?.counts || {};
                 const percentages = summary?.percentages || {};
+                const total = Number(summary?.total || 0);
+
+                if (calendarCountEl) {
+                    calendarCountEl.textContent = String(total);
+                }
 
                 statuses.forEach((status) => {
                     const countEl = document.querySelector(`[data-status-count="${status}"]`);
@@ -492,7 +708,10 @@
                         countEl.textContent = String(count);
                     }
                     if (barEl) {
-                        barEl.style.width = `${pct}%`;
+                        // Animate width updates instead of instant jumps.
+                        requestAnimationFrame(() => {
+                            barEl.style.width = `${pct}%`;
+                        });
                     }
                 });
             };
@@ -535,12 +754,23 @@
                     return;
                 }
 
+                dashboardSummaryReceived = true;
+                setDashboardLoading(false);
                 updateOrderStatusBreakdown(data.payload || {});
                 emitHciInteraction('status_breakdown_updated', {
                     sourceBoard: data.payload?.boardName || 'Unknown',
                     total: data.payload?.total || 0
                 });
             });
+
+            setDashboardLoading(true, 'Loading dashboard data...');
+
+            // Fallback: avoid blocking the dashboard forever if summary is delayed.
+            setTimeout(() => {
+                if (!dashboardSummaryReceived) {
+                    setDashboardLoading(false);
+                }
+            }, 4500);
 
             // Preload task iframe in the background so dashboard metrics can sync immediately.
             if (taskFrame && taskFrame.src === 'about:blank' && taskFrame.dataset.src) {
@@ -554,14 +784,14 @@
                 emitHciInteraction('summary_loader_started', { section: 'task-management' });
             }
 
-            // Preload calendar iframe shortly after page load to reduce first-open delay.
+            // Preload calendar iframe almost immediately to reduce first-open delay.
             if (calendarFrame && calendarFrame.src === 'about:blank' && calendarFrame.dataset.src) {
                 setTimeout(() => {
                     if (calendarFrame.src === 'about:blank') {
                         calendarFrame.src = calendarFrame.dataset.src;
-                        emitHciInteraction('embed_preload_started', { section: 'calendar-management', delayMs: 1000 });
+                        emitHciInteraction('embed_preload_started', { section: 'calendar-management', delayMs: 100 });
                     }
-                }, 1000);
+                }, 100);
             }
 
             links.forEach(link => {
@@ -569,6 +799,13 @@
                     event.preventDefault();
                     openSection(link.dataset.section, link);
                 });
+            });
+
+            document.addEventListener('printopia:controls-updated', applyControlSettings);
+            window.addEventListener('storage', (event) => {
+                if (event.key === controlSettingsKey) {
+                    applyControlSettings();
+                }
             });
 
             if (sidebarHideBtn) {
@@ -580,6 +817,7 @@
             }
 
             applySidebarState(localStorage.getItem(sidebarStateKey) === '1');
+            applyControlSettings();
         });
     </script>
 </body>

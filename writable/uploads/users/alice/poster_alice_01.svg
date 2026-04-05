@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#10224f"/>
+      <stop offset="100%" stop-color="#1e91d6"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="900" fill="url(#bg)"/>
+  <rect x="90" y="90" width="1020" height="720" rx="28" fill="#ffffff" opacity="0.95"/>
+  <text x="130" y="220" font-family="Arial, sans-serif" font-size="84" font-weight="700" fill="#10224f">Printopia Promo</text>
+  <text x="130" y="300" font-family="Arial, sans-serif" font-size="44" fill="#5a6072">Custom Mugs • Posters • Shirts</text>
+  <circle cx="960" cy="260" r="120" fill="#e7a821"/>
+  <text x="885" y="276" font-family="Arial, sans-serif" font-size="42" font-weight="700" fill="#10224f">NEW</text>
+</svg>

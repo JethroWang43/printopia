@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+  <rect width="1200" height="900" fill="#10224f"/>
+  <text x="120" y="210" font-family="Arial, sans-serif" font-size="74" font-weight="800" fill="#ffffff">Poster Draft v2</text>
+  <text x="120" y="280" font-family="Arial, sans-serif" font-size="34" fill="#d6e6ff">For final print review</text>
+  <rect x="120" y="340" width="960" height="440" rx="20" fill="#ffffff"/>
+  <rect x="170" y="390" width="360" height="340" rx="16" fill="#eef1f8"/>
+  <rect x="570" y="390" width="460" height="50" rx="10" fill="#10224f"/>
+  <rect x="570" y="465" width="420" height="28" rx="8" fill="#5a6072"/>
+  <rect x="570" y="515" width="300" height="28" rx="8" fill="#5a6072"/>
+  <rect x="570" y="585" width="220" height="62" rx="10" fill="#7f1d1d"/>
+  <text x="625" y="625" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#ffffff">Preview</text>
+</svg>
