@@ -74,6 +74,7 @@ class Filters extends BaseFilters
         'before' => [
             // 'honeypot',
             // 'csrf',
+            'csrf' => ['except' => ['admin/gallery/save_to_db']],
             // 'invalidchars',
         ],
         'after' => [

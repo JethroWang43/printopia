@@ -37,10 +37,18 @@ $routes->get('printopia/admin', 'Admin::index');
 $routes->get('Printopia/admin', 'Admin::index');
 $routes->get('printopia/employee', 'Employee::index');
 $routes->get('Printopia/employee', 'Employee::index');
-$routes->get('printopia/admin/gallery/files', 'Admin::galleryFiles');
-$routes->get('Printopia/admin/gallery/files', 'Admin::galleryFiles');
-$routes->get('printopia/admin/gallery/file/(:any)', 'Admin::galleryFile/$1');
-$routes->get('Printopia/admin/gallery/file/(:any)', 'Admin::galleryFile/$1');
+// $routes->get('printopia/admin/gallery/files', 'Admin::galleryFiles');
+// $routes->get('Printopia/admin/gallery/files', 'Admin::galleryFiles');
+// $routes->get('printopia/admin/gallery/file/(:any)', 'Admin::galleryFile/$1');
+// $routes->get('Printopia/admin/gallery/file/(:any)', 'Admin::galleryFile/$1');
+
+// Gallery Group
+$routes->group('printopia/admin/gallery', function($routes) {
+    $routes->get('files', 'Gallery::files');
+    $routes->post('save_to_db', 'Gallery::save_to_db');
+    // Change this to post
+    $routes->post('delete/(:num)', 'Gallery::delete/$1'); 
+});
 
 $routes->get('printopia/trello-task/index.html', 'Admin::trelloTaskIndex');
 $routes->get('Printopia/trello-task/index.html', 'Admin::trelloTaskIndex');
