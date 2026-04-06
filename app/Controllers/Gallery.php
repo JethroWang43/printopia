@@ -9,9 +9,92 @@ class Gallery extends BaseController
 {
     use ResponseTrait;
 
+    private function getCloudinaryConfig(): array
+    {
+        return [
+            'cloudName' => 'dik33xzef',
+            'apiKey' => '561229386672246',
+            'apiSecret' => 'hkjnNoLn0PwITfBszyy6nTGQoYs',
+        ];
+    }
+
+    private function buildCloudinarySignedDownloadUrl(string $publicId, string $format): string
+    {
+        $cfg = $this->getCloudinaryConfig();
+        $timestamp = time();
+
+        $params = [
+            'format' => $format,
+            'public_id' => $publicId,
+            'timestamp' => $timestamp,
+            'type' => 'upload',
+        ];
+        ksort($params);
+
+        // Cloudinary signatures must use unescaped key=value pairs.
+        $signatureParts = [];
+        foreach ($params as $key => $value) {
+            $signatureParts[] = $key . '=' . $value;
+        }
+        $toSign = implode('&', $signatureParts);
+        $signature = sha1($toSign . $cfg['apiSecret']);
+
+        $query = $params;
+        $query['signature'] = $signature;
+        $query['api_key'] = $cfg['apiKey'];
+
+        return 'https://api.cloudinary.com/v1_1/' . $cfg['cloudName'] . '/image/download?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    private function getGalleryTableBuilder()
+    {
+        $dbConfig = config('Database');
+        $defaultParams = $dbConfig->default;
+
+        try {
+            $defaultDb = \Config\Database::connect();
+            if ($defaultDb->tableExists('gallery_designs')) {
+                return $defaultDb->table('gallery_designs');
+            }
+        } catch (\Throwable $e) {
+            // Fallback to schema discovery below when default DB is invalid.
+        }
+
+        $serverParams = $defaultParams;
+        $serverParams['database'] = '';
+        $serverDb = \Config\Database::connect($serverParams, false);
+
+        $query = $serverDb->query(
+            "SELECT TABLE_SCHEMA FROM information_schema.tables WHERE TABLE_NAME = 'gallery_designs' LIMIT 1"
+        );
+        $row = $query->getRowArray();
+
+        if (!$row || empty($row['TABLE_SCHEMA'])) {
+            throw new \RuntimeException('Could not locate gallery_designs table in any database schema.');
+        }
+
+        $galleryParams = $defaultParams;
+        $galleryParams['database'] = $row['TABLE_SCHEMA'];
+        $galleryDb = \Config\Database::connect($galleryParams, false);
+
+        return $galleryDb->table('gallery_designs');
+    }
+
     public function files() {
-        $db = \Config\Database::connect();
-        $builder = $db->table('gallery_designs');
+        try {
+            $builder = $this->getGalleryTableBuilder();
+        } catch (\Throwable $e) {
+            return $this->respond([
+                'files' => [],
+                'summary' => [
+                    'totalImages' => 0,
+                    'storageBytes' => 0,
+                    'categories' => 0,
+                    'thisMonth' => 0,
+                ],
+                'error' => $e->getMessage(),
+            ], 500);
+        }
         
         // Fetch all records ordered by newest first
         $files = $builder->orderBy('created_at', 'DESC')->get()->getResult();
@@ -55,8 +138,17 @@ class Gallery extends BaseController
             ];
         }
 
-        $db = \Config\Database::connect();
-        if ($db->table('gallery_designs')->insertBatch($insertData)) {
+        try {
+            $builder = $this->getGalleryTableBuilder();
+        } catch (\Throwable $e) {
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+                'token' => csrf_hash(),
+            ]);
+        }
+
+        if ($builder->insertBatch($insertData)) {
             return $this->response->setJSON([
                 'status' => 'success', 
                 'count'  => count($insertData),
@@ -77,16 +169,24 @@ class Gallery extends BaseController
             return $this->response->setJSON(['status' => 'error', 'message' => 'No ID provided']);
         }
 
-        $db = \Config\Database::connect();
-        $builder = $db->table('gallery_designs');
+        try {
+            $builder = $this->getGalleryTableBuilder();
+        } catch (\Throwable $e) {
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+                'token' => csrf_hash(),
+            ]);
+        }
         
         // 1. Get file details
         $file = $builder->where('id', $id)->get()->getRow();
 
         if ($file && !empty($file->public_id)) {
-            $cloudName = 'dik33xzef'; 
-            $apiKey    = '561229386672246'; 
-            $apiSecret = 'hkjnNoLn0PwITfBszyy6nTGQoYs'; 
+            $cfg = $this->getCloudinaryConfig();
+            $cloudName = $cfg['cloudName'];
+            $apiKey = $cfg['apiKey'];
+            $apiSecret = $cfg['apiSecret'];
             $timestamp = time();
             
             // 2. Correct Signature Generation
@@ -136,5 +236,38 @@ class Gallery extends BaseController
             'message' => 'Database delete failed',
             'token'  => csrf_hash()
         ]);
+    }
+
+    public function open($id = null)
+    {
+        if (!$id) {
+            return redirect()->back();
+        }
+
+        try {
+            $builder = $this->getGalleryTableBuilder();
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+
+        $file = $builder->where('id', $id)->get()->getRow();
+        if (!$file) {
+            return redirect()->back()->with('error', 'File not found.');
+        }
+
+        $format = strtolower((string) ($file->format ?? ''));
+        $fileUrl = trim((string) ($file->image_url ?? ''));
+        $publicId = trim((string) ($file->public_id ?? ''));
+
+        if ($format === 'pdf' && $publicId !== '') {
+            $signedUrl = $this->buildCloudinarySignedDownloadUrl($publicId, 'pdf');
+            return redirect()->to($signedUrl);
+        }
+
+        if ($fileUrl !== '') {
+            return redirect()->to($fileUrl);
+        }
+
+        return redirect()->back()->with('error', 'File URL is missing.');
     }
 }

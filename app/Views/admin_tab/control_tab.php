@@ -40,6 +40,23 @@
         font-size: 0.98rem;
     }
 
+    .control-panel-tools {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+    }
+
+    .control-panel-count {
+        color: #5f6d8b;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
     .control-list {
         display: grid;
         gap: 8px;
@@ -49,6 +66,65 @@
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 6px;
+        max-height: 280px;
+        overflow: auto;
+        padding-right: 2px;
+    }
+
+    .control-employee-tools {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 200px;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    .control-search,
+    .control-select {
+        min-height: 34px;
+        border: 1px solid #cfd8ea;
+        border-radius: 10px;
+        padding: 0 10px;
+        font-family: inherit;
+        font-size: 0.84rem;
+        color: #2f3e64;
+        background: #ffffff;
+    }
+
+    .control-bulk-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .control-bulk-actions {
+        display: inline-flex;
+        gap: 6px;
+    }
+
+    .control-bulk-btn {
+        border: 1px solid #cfd8ea;
+        border-radius: 8px;
+        background: #ffffff;
+        color: #314364;
+        font-family: inherit;
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 4px 8px;
+        cursor: pointer;
+    }
+
+    .control-bulk-btn.enable {
+        border-color: #b7dfc8;
+        color: #0e7f42;
+        background: #f0fbf5;
+    }
+
+    .control-bulk-btn.disable {
+        border-color: #ebc2c2;
+        color: #8d2a2a;
+        background: #fff5f5;
     }
 
     .control-compact-item {
@@ -202,6 +278,14 @@
         .control-grid {
             grid-template-columns: 1fr;
         }
+
+        .control-employee-tools {
+            grid-template-columns: 1fr;
+        }
+
+        .control-role-grid {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 
@@ -213,16 +297,36 @@
         <div class="control-grid">
             <section class="control-panel">
                 <h4>Admin Features</h4>
+                <div class="control-panel-tools">
+                    <span class="control-panel-count" id="adminFeaturesCount">0/0 enabled</span>
+                    <div class="control-bulk-actions">
+                        <button type="button" class="control-bulk-btn enable" data-bulk-scope="adminSections" data-bulk-mode="enable">Enable All</button>
+                        <button type="button" class="control-bulk-btn disable" data-bulk-scope="adminSections" data-bulk-mode="disable">Disable All</button>
+                    </div>
+                </div>
                 <div class="control-list" id="adminControlsList"></div>
             </section>
 
             <section class="control-panel">
                 <h4>Admin Access by Employee</h4>
+                <div class="control-employee-tools">
+                    <input type="search" class="control-search" id="controlEmployeeSearch" placeholder="Search employee name or role">
+                    <select class="control-select" id="controlEmployeeRoleFilter">
+                        <option value="all">All roles</option>
+                    </select>
+                </div>
                 <div class="control-list" id="adminEmployeeAccessList"></div>
             </section>
 
             <section class="control-panel">
                 <h4>Employee Tab Access</h4>
+                <div class="control-panel-tools">
+                    <span class="control-panel-count" id="employeeTabsCount">0/0 enabled</span>
+                    <div class="control-bulk-actions">
+                        <button type="button" class="control-bulk-btn enable" data-bulk-scope="employeeTabs" data-bulk-mode="enable">Enable All</button>
+                        <button type="button" class="control-bulk-btn disable" data-bulk-scope="employeeTabs" data-bulk-mode="disable">Disable All</button>
+                    </div>
+                </div>
                 <div class="control-list" id="employeeControlsList"></div>
             </section>
 
@@ -246,10 +350,15 @@
         if (!root) return;
 
         const controlSettingsKey = 'printopiaControlSettingsV1';
+        const controlUiStateKey = 'printopiaControlUiStateV1';
         const accountsStorageKey = 'printopiaAccountsV1';
         const adminList = document.querySelector('#adminControlsList');
+        const adminFeaturesCount = document.querySelector('#adminFeaturesCount');
         const adminEmployeeList = document.querySelector('#adminEmployeeAccessList');
+        const employeeSearchInput = document.querySelector('#controlEmployeeSearch');
+        const employeeRoleFilterSelect = document.querySelector('#controlEmployeeRoleFilter');
         const employeeList = document.querySelector('#employeeControlsList');
+        const employeeTabsCount = document.querySelector('#employeeTabsCount');
         const generalList = document.querySelector('#generalControlsList');
         const statusMsg = document.querySelector('#controlStatusMsg');
 
@@ -291,8 +400,29 @@
         const getEmployeeOptionList = () => {
             return getEmployeeAccounts().map((account) => ({
                 key: employeeNameKey(account?.name || ''),
+                roleKey: normalize(account?.employeeRole || 'unassigned'),
+                roleLabel: String(account?.employeeRole || 'Unassigned').trim() || 'Unassigned',
                 label: account?.employeeRole ? `${account.name} (${account.employeeRole})` : account.name,
             })).filter((item) => item.key);
+        };
+
+        const getFilteredEmployeeOptions = (employeeOptions) => {
+            const query = employeeFilterQuery;
+            const roleKey = employeeRoleFilter;
+
+            return employeeOptions.filter((employee) => {
+                const matchesRole = roleKey === 'all' || employee.roleKey === roleKey;
+                if (!matchesRole) {
+                    return false;
+                }
+
+                if (!query) {
+                    return true;
+                }
+
+                const haystack = `${employee.label} ${employee.roleLabel}`.toLowerCase();
+                return haystack.includes(query);
+            });
         };
 
         const defaults = {
@@ -335,9 +465,45 @@
             }
         };
 
+        const loadUiState = () => {
+            try {
+                const raw = JSON.parse(localStorage.getItem(controlUiStateKey) || '{}');
+                return {
+                    expandedAdminEmployeeSection: typeof raw?.expandedAdminEmployeeSection === 'string'
+                        ? raw.expandedAdminEmployeeSection
+                        : ''
+                };
+            } catch (error) {
+                return {
+                    expandedAdminEmployeeSection: ''
+                };
+            }
+        };
+
+        const saveUiState = (uiState) => {
+            localStorage.setItem(controlUiStateKey, JSON.stringify(uiState));
+        };
+
         const renderSwitches = () => {
             const settings = loadSettings();
             const employeeOptions = getEmployeeOptionList();
+            const filteredEmployeeOptions = getFilteredEmployeeOptions(employeeOptions);
+
+            if (employeeRoleFilterSelect) {
+                const roleKeys = Array.from(new Set(employeeOptions.map((employee) => employee.roleKey).filter(Boolean))).sort();
+                const previousValue = employeeRoleFilterSelect.value || employeeRoleFilter || 'all';
+                const roleOptionsHtml = ['<option value="all">All roles</option>']
+                    .concat(roleKeys.map((roleKey) => {
+                        const roleLabel = employeeOptions.find((employee) => employee.roleKey === roleKey)?.roleLabel || roleKey;
+                        return `<option value="${roleKey}">${roleLabel}</option>`;
+                    }))
+                    .join('');
+
+                employeeRoleFilterSelect.innerHTML = roleOptionsHtml;
+                const hasPrevious = previousValue === 'all' || roleKeys.includes(previousValue);
+                employeeRoleFilter = hasPrevious ? previousValue : 'all';
+                employeeRoleFilterSelect.value = employeeRoleFilter;
+            }
 
             adminList.innerHTML = adminConfig.map((item) => `
                 <label class="control-item">
@@ -346,9 +512,15 @@
                 </label>
             `).join('');
 
+            if (adminFeaturesCount) {
+                const enabledCount = adminConfig.filter((item) => Boolean(settings.adminSections[item.key])).length;
+                adminFeaturesCount.textContent = `${enabledCount}/${adminConfig.length} enabled`;
+            }
+
             adminEmployeeList.innerHTML = adminConfig.map((item) => {
                 const accessMap = settings.adminEmployeeAccess[item.key] || {};
                 const isOpen = expandedAdminEmployeeSection === item.key;
+                const enabledCount = filteredEmployeeOptions.filter((employee) => Boolean(accessMap[employee.key])).length;
                 return `
                     <div class="control-compact-item ${isOpen ? 'open' : ''}">
                         <button type="button" class="control-compact-toggle" data-admin-employee-toggle="${item.key}">
@@ -356,14 +528,20 @@
                             <span class="caret">▶</span>
                         </button>
                         <div class="control-compact-body">
-                            <p class="control-subhead">Assign to specific employees</p>
+                            <div class="control-bulk-row">
+                                <p class="control-subhead">Assign to specific employees (${enabledCount}/${filteredEmployeeOptions.length})</p>
+                                <div class="control-bulk-actions">
+                                    <button type="button" class="control-bulk-btn enable" data-admin-employee-bulk="enable" data-key="${item.key}">Enable Filtered</button>
+                                    <button type="button" class="control-bulk-btn disable" data-admin-employee-bulk="disable" data-key="${item.key}">Disable Filtered</button>
+                                </div>
+                            </div>
                             <div class="control-role-grid">
-                                ${employeeOptions.map((employee) => `
+                                ${filteredEmployeeOptions.length ? filteredEmployeeOptions.map((employee) => `
                                     <label class="control-role-item">
                                         <span>${employee.label}</span>
                                         <input type="checkbox" class="control-switch" data-scope="adminEmployeeAccess" data-key="${item.key}" data-employee-key="${employee.key}" ${accessMap[employee.key] ? 'checked' : ''}>
                                     </label>
-                                `).join('')}
+                                `).join('') : '<div class="control-subhead">No employees match the current filters.</div>'}
                             </div>
                             <div class="control-subhead">Only checked employees can access this admin tab.</div>
                         </div>
@@ -377,6 +555,11 @@
                     <input type="checkbox" class="control-switch" data-scope="employeeTabs" data-key="${item.key}" ${settings.employeeTabs[item.key] ? 'checked' : ''}>
                 </label>
             `).join('');
+
+            if (employeeTabsCount) {
+                const enabledCount = employeeConfig.filter((item) => Boolean(settings.employeeTabs[item.key])).length;
+                employeeTabsCount.textContent = `${enabledCount}/${employeeConfig.length} enabled`;
+            }
 
             const intervalValue = Number(settings.generalSettings.employeeAutoRefreshIntervalSec || 30);
             generalList.innerHTML = `
@@ -439,11 +622,92 @@
             saveSettings(settings);
         });
 
-        let expandedAdminEmployeeSection = adminConfig[0]?.key || 'notification-management';
+        root.addEventListener('click', (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLElement)) {
+                return;
+            }
+
+            const bulkButton = target.closest('[data-bulk-scope][data-bulk-mode]');
+            if (!bulkButton) {
+                return;
+            }
+
+            const scope = bulkButton.getAttribute('data-bulk-scope');
+            const mode = bulkButton.getAttribute('data-bulk-mode');
+            if (!scope || !mode) {
+                return;
+            }
+
+            const settings = loadSettings();
+            const shouldEnable = mode === 'enable';
+
+            if (scope === 'adminSections') {
+                adminConfig.forEach((item) => {
+                    settings.adminSections[item.key] = shouldEnable;
+                });
+
+                // Prevent locking the UI completely.
+                settings.adminSections['control-management'] = true;
+            } else if (scope === 'employeeTabs') {
+                employeeConfig.forEach((item) => {
+                    settings.employeeTabs[item.key] = shouldEnable;
+                });
+            } else {
+                return;
+            }
+
+            saveSettings(settings);
+            renderSwitches();
+        });
+
+        const initialUiState = loadUiState();
+        let expandedAdminEmployeeSection = initialUiState.expandedAdminEmployeeSection || '';
+        let employeeFilterQuery = '';
+        let employeeRoleFilter = 'all';
+
+        employeeSearchInput?.addEventListener('input', () => {
+            employeeFilterQuery = normalize(employeeSearchInput.value || '');
+            renderSwitches();
+        });
+
+        employeeRoleFilterSelect?.addEventListener('change', () => {
+            employeeRoleFilter = employeeRoleFilterSelect.value || 'all';
+            renderSwitches();
+        });
 
         adminEmployeeList?.addEventListener('click', (event) => {
             const target = event.target;
             if (!(target instanceof HTMLElement)) {
+                return;
+            }
+
+            const bulkButton = target.closest('[data-admin-employee-bulk]');
+            if (bulkButton) {
+                const sectionKey = bulkButton.getAttribute('data-key');
+                const bulkMode = bulkButton.getAttribute('data-admin-employee-bulk');
+                if (!sectionKey || !bulkMode) {
+                    return;
+                }
+
+                const settings = loadSettings();
+                if (!settings.adminEmployeeAccess[sectionKey]) {
+                    return;
+                }
+
+                const filteredEmployeeOptions = getFilteredEmployeeOptions(getEmployeeOptionList());
+                const shouldEnable = bulkMode === 'enable';
+
+                settings.adminEmployeeAccess[sectionKey] = {
+                    ...settings.adminEmployeeAccess[sectionKey],
+                };
+
+                filteredEmployeeOptions.forEach((employee) => {
+                    settings.adminEmployeeAccess[sectionKey][employee.key] = shouldEnable;
+                });
+
+                saveSettings(settings);
+                renderSwitches();
                 return;
             }
 
@@ -458,6 +722,7 @@
             }
 
             expandedAdminEmployeeSection = expandedAdminEmployeeSection === nextKey ? '' : nextKey;
+            saveUiState({ expandedAdminEmployeeSection });
             renderSwitches();
         });
 

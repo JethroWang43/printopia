@@ -766,11 +766,8 @@
         </div>
     </div>
 
-    <script src="<?= base_url('trello-task/lib/env.js'); ?>"></script>
     <script>
-        const TRELLO_API_URL = (window.APP_ENV && window.APP_ENV.TRELLO_API_URL) || 'https://api.trello.com/1';
-        const TRELLO_API_KEY = (window.APP_ENV && window.APP_ENV.TRELLO_API_KEY) || '';
-        const TRELLO_TOKEN = localStorage.getItem('trelloToken') || ((window.APP_ENV && window.APP_ENV.DEFAULT_TOKEN) || '');
+        const TRELLO_PROXY_URL = <?= json_encode(base_url('trello-task/proxy')); ?>;
         const CHECKED_BY_STORAGE_KEY = 'checklistCheckedBy';
         const CONTROL_SETTINGS_KEY = 'printopiaControlSettingsV1';
 
@@ -935,34 +932,29 @@
         }
 
         async function trelloRequest(endpoint) {
-            if (!TRELLO_API_KEY || !TRELLO_TOKEN) {
-                throw new Error('Missing Trello credentials.');
-            }
-
-            const separator = endpoint.includes('?') ? '&' : '?';
-            const url = `${TRELLO_API_URL}${endpoint}${separator}key=${encodeURIComponent(TRELLO_API_KEY)}&token=${encodeURIComponent(TRELLO_TOKEN)}`;
-            const response = await fetch(url);
+            const response = await fetch(TRELLO_PROXY_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ endpoint, method: 'GET' })
+            });
 
             if (!response.ok) {
-                throw new Error(`Trello API error (${response.status})`);
+                const errorText = await response.text();
+                throw new Error(`Trello API error (${response.status}): ${errorText}`);
             }
 
             return response.json();
         }
 
         async function trelloRequestWithMethod(endpoint, method, body) {
-            if (!TRELLO_API_KEY || !TRELLO_TOKEN) {
-                throw new Error('Missing Trello credentials.');
-            }
-
-            const separator = endpoint.includes('?') ? '&' : '?';
-            const url = `${TRELLO_API_URL}${endpoint}${separator}key=${encodeURIComponent(TRELLO_API_KEY)}&token=${encodeURIComponent(TRELLO_TOKEN)}`;
-            const response = await fetch(url, {
-                method: method,
+            const response = await fetch(TRELLO_PROXY_URL, {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: body ? JSON.stringify(body) : undefined
+                body: JSON.stringify({ endpoint, method, body })
             });
 
             if (!response.ok) {
@@ -1225,26 +1217,15 @@
         async function updateEmployeeChecklistItem(cardId, checklistId, itemId, newState) {
             try {
                 console.log('Updating checklist item:', { cardId, checklistId, itemId, newState });
-                
-                const response = await fetch(
-                    `${TRELLO_API_URL}/cards/${cardId}/checkItem/${itemId}?key=${TRELLO_API_KEY}&token=${TRELLO_TOKEN}`,
-                    {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ state: newState })
-                    }
+
+                const result = await trelloRequestWithMethod(
+                    `/cards/${cardId}/checkItem/${itemId}`,
+                    'PUT',
+                    { state: newState }
                 );
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Trello API error:', response.status, errorText);
-                    throw new Error(`Trello API error: ${response.status} - ${errorText}`);
-                }
-                
+
                 console.log('Checklist item updated successfully');
-                return await response.json();
+                return result;
             } catch (error) {
                 console.error('Checklist item update failed:', error);
                 throw error;
@@ -1482,7 +1463,7 @@
             } catch (error) {
                 state.tasks = [];
                 renderDashboard();
-                statusMessage.innerHTML = 'Could not load Trello data. Make sure token and API settings are available.';
+                statusMessage.innerHTML = 'Could not load Trello data. Make sure the server Trello settings are available.';
                 console.error('Employee Trello load failed:', error);
             }
         }

@@ -1,8 +1,5 @@
 // Trello API Configuration
-let TRELLO_API_KEY = '';
-let TRELLO_API_URL = 'https://api.trello.com/1';
-let DEFAULT_TOKEN = '';
-let TRELLO_TOKEN = null;
+const TRELLO_PROXY_URL = './proxy';
 let employeeAccessMode = false;
 let currentEmployeeName = '';
 const EMBED_VIEW_MODE = (new URLSearchParams(window.location.search).get('view') || 'all').toLowerCase();
@@ -19,6 +16,81 @@ let currentBoardLists = [];
 let currentChecklistDragItem = null;
 let viewLoadingStartedAt = 0;
 let viewLoadingHideTimer = null;
+let quickTaskActionModalInstance = null;
+let tableViewCurrentPage = 1;
+let tableViewPageSize = 8;
+
+function refreshTableViewWithCurrentFilters() {
+    if (!currentBoardLists.length) {
+        return;
+    }
+    const filteredLists = getFilteredLists(currentBoardLists);
+    loadTableView(filteredLists);
+}
+
+function updateTablePaginationUI(totalRows, totalPages, pageStart, pageCount) {
+    const summaryEl = document.querySelector('#tablePaginationSummary');
+    const pageInfoEl = document.querySelector('#tablePaginationPageInfo');
+    const prevBtn = document.querySelector('#tablePaginationPrev');
+    const nextBtn = document.querySelector('#tablePaginationNext');
+
+    if (summaryEl) {
+        if (!totalRows) {
+            summaryEl.textContent = 'Showing 0-0 of 0 tasks';
+        } else {
+            const from = pageStart + 1;
+            const to = pageStart + pageCount;
+            summaryEl.textContent = `Showing ${from}-${to} of ${totalRows} tasks`;
+        }
+    }
+
+    if (pageInfoEl) {
+        pageInfoEl.textContent = `Page ${tableViewCurrentPage} of ${totalPages}`;
+    }
+
+    if (prevBtn) {
+        prevBtn.disabled = tableViewCurrentPage <= 1;
+    }
+    if (nextBtn) {
+        nextBtn.disabled = tableViewCurrentPage >= totalPages;
+    }
+}
+
+function setupTablePaginationControls() {
+    const pageSizeSelect = document.querySelector('#tablePaginationPageSize');
+    const prevBtn = document.querySelector('#tablePaginationPrev');
+    const nextBtn = document.querySelector('#tablePaginationNext');
+
+    if (pageSizeSelect && pageSizeSelect.dataset.bound !== 'true') {
+        pageSizeSelect.dataset.bound = 'true';
+        pageSizeSelect.value = String(tableViewPageSize);
+        pageSizeSelect.addEventListener('change', () => {
+            const parsed = Number.parseInt(pageSizeSelect.value, 10);
+            tableViewPageSize = Number.isFinite(parsed) && parsed > 0 ? parsed : 8;
+            tableViewCurrentPage = 1;
+            refreshTableViewWithCurrentFilters();
+        });
+    }
+
+    if (prevBtn && prevBtn.dataset.bound !== 'true') {
+        prevBtn.dataset.bound = 'true';
+        prevBtn.addEventListener('click', () => {
+            if (tableViewCurrentPage <= 1) {
+                return;
+            }
+            tableViewCurrentPage -= 1;
+            refreshTableViewWithCurrentFilters();
+        });
+    }
+
+    if (nextBtn && nextBtn.dataset.bound !== 'true') {
+        nextBtn.dataset.bound = 'true';
+        nextBtn.addEventListener('click', () => {
+            tableViewCurrentPage += 1;
+            refreshTableViewWithCurrentFilters();
+        });
+    }
+}
 
 function setViewLoading(visible, message = 'Preparing task data') {
     const overlay = document.querySelector('#viewLoadingOverlay');
@@ -613,6 +685,15 @@ function getEmployeeNameVariants(name) {
 
 function extractAssigneeNamesFromCard(card) {
     const assigneeNames = new Set();
+
+    // Fast fallback: use Trello members when available so assignees can render immediately.
+    (card?.members || []).forEach((member) => {
+        const memberName = String(member?.fullName || member?.username || '').trim();
+        if (memberName) {
+            assigneeNames.add(memberName);
+        }
+    });
+
     if (!card?.checklists || card.checklists.length === 0) {
         return assigneeNames;
     }
@@ -677,175 +758,43 @@ function canCurrentEmployeeEditChecklistItem(itemName) {
     });
 }
 
-function parseEnvContent(content) {
-    const env = {};
-    const lines = content.split(/\r?\n/);
-
-    lines.forEach(line => {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith('#')) {
-            return;
-        }
-
-        const separatorIndex = trimmed.indexOf('=');
-        if (separatorIndex === -1) {
-            return;
-        }
-
-        const key = trimmed.slice(0, separatorIndex).trim();
-        const value = trimmed.slice(separatorIndex + 1).trim();
-
-        if (key) {
-            env[key] = value;
-        }
-    });
-
-    return env;
-}
-
-async function loadEnvConfig() {
-    if (window.APP_ENV && typeof window.APP_ENV === 'object') {
-        TRELLO_API_KEY = window.APP_ENV.TRELLO_API_KEY || TRELLO_API_KEY;
-        TRELLO_API_URL = window.APP_ENV.TRELLO_API_URL || TRELLO_API_URL;
-        DEFAULT_TOKEN = window.APP_ENV.DEFAULT_TOKEN || DEFAULT_TOKEN;
-        return;
-    }
-
-    try {
-        const response = await fetch('./lib/.env', { cache: 'no-store' });
-        if (!response.ok) {
-            console.warn('Could not load lib/.env. Status:', response.status);
-            return;
-        }
-
-        const envText = await response.text();
-        const env = parseEnvContent(envText);
-
-        TRELLO_API_KEY = env.TRELLO_API_KEY || TRELLO_API_KEY;
-        TRELLO_API_URL = env.TRELLO_API_URL || TRELLO_API_URL;
-        DEFAULT_TOKEN = env.DEFAULT_TOKEN || DEFAULT_TOKEN;
-    } catch (error) {
-        console.warn('Failed to load lib/.env:', error);
-    }
-}
-
-// Initialize with default token
 async function initializeTrello() {
-    await loadEnvConfig();
-
-    TRELLO_TOKEN = localStorage.getItem('trelloToken') || DEFAULT_TOKEN;
-    if (TRELLO_TOKEN) {
-        localStorage.setItem('trelloToken', TRELLO_TOKEN);
-    }
     return true;
 }
 
-// Show token setup modal
 function showTokenSetupModal() {
-    const modalHTML = `
-        <div class="modal fade" id="setupModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title">Setup Trello Integration</h5>
-                    </div>
-                    <div class="modal-body">
-                        <p><strong>Paste your Trello API Token</strong></p>
-                        <p class="small text-muted">You got this from the Trello Security page (it starts with "ATATT")</p>
-                        
-                        <div class="form-group mb-3">
-                            <input type="text" class="form-control" id="tokenInput" placeholder="Paste your token here (ATATT...)">
-                            <small class="form-text text-muted mt-2">Your token is stored locally and never sent to external servers.</small>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-primary" onclick="saveCredentials()">Connect</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    new bootstrap.Modal(document.querySelector('#setupModal')).show();
-}
-
-// Save token and initialize app
-function saveCredentials() {
-    const token = document.querySelector('#tokenInput').value.trim();
-    
-    if (!token) {
-        alert('Please enter your token');
-        return;
-    }
-    
-    localStorage.setItem('trelloToken', token);
-    TRELLO_TOKEN = token;
-    
-    const modal = bootstrap.Modal.getInstance(document.querySelector('#setupModal'));
-    modal.hide();
-    
-    document.querySelector('#setupModal').remove();
-    
-    loadWorkspaces();
+    showSettings();
 }
 
 // Make API calls to Trello
 async function trelloAPI(endpoint, method = 'GET', body = null) {
-    if (!TRELLO_API_KEY) {
-        console.error('API key not set');
-        return null;
-    }
-
-    if (!TRELLO_TOKEN) {
-        console.error('Token not set');
-        return null;
-    }
-    
-    const url = `${TRELLO_API_URL}${endpoint}?key=${TRELLO_API_KEY}&token=${TRELLO_TOKEN}`;
-    
-    console.log('===== API CALL =====');
-    console.log('Endpoint:', endpoint);
-    console.log('Method:', method);
-    
-    const options = {
-        method,
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    };
-    
-    if (body) {
-        options.body = JSON.stringify(body);
-    }
-    
     try {
-        // Add timeout of 10 seconds
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-        
-        const response = await fetch(url, {
-            ...options,
-            signal: controller.signal
+        const response = await fetch(TRELLO_PROXY_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ endpoint, method, body })
         });
-        
-        clearTimeout(timeoutId);
-        
-        console.log('Response status:', response.status, response.statusText);
-        
+
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('ERROR Response body:', errorText);
-            console.error('Status:', response.status);
+            console.error('Trello proxy error:', response.status, errorText);
             return null;
         }
-        
-        const data = await response.json();
-        console.log('SUCCESS! Data received:', data);
-        return data;
+
+        if (response.status === 204) {
+            return null;
+        }
+
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            return response.json();
+        }
+
+        return response.text();
     } catch (error) {
-        console.error('Fetch error:', error.message);
-        console.error('Full error:', error);
+        console.error('Trello proxy fetch failed:', error.message);
         return null;
     }
 }
@@ -854,7 +803,6 @@ async function trelloAPI(endpoint, method = 'GET', body = null) {
 async function loadWorkspaces() {
     try {
         console.log('Loading workspaces...');
-        console.log('Using token:', TRELLO_TOKEN ? TRELLO_TOKEN.substring(0, 20) + '...' : 'NONE');
         
         const workspacesList = document.querySelector('#workspacesList');
         const projectsList = document.querySelector('#projectsList');
@@ -867,24 +815,15 @@ async function loadWorkspaces() {
         workspacesList.innerHTML = `<span style="color: #0066cc;">Fetching member info...</span>`;
         projectsList.innerHTML = `<span style="color: #0066cc;">Fetching boards...</span>`;
         
-        const member = await trelloAPI('/members/me');
-        
-        if (!member) {
-            if (DEFAULT_TOKEN && TRELLO_TOKEN !== DEFAULT_TOKEN) {
-                console.warn('Current token failed. Falling back to DEFAULT_TOKEN from environment config.');
-                TRELLO_TOKEN = DEFAULT_TOKEN;
-                localStorage.setItem('trelloToken', TRELLO_TOKEN);
-                return loadWorkspaces();
-            }
+        const [member, boards] = await Promise.all([
+            trelloAPI('/members/me'),
+            trelloAPI('/members/me/boards')
+        ]);
 
+        if (!member || !boards) {
             const errorMsg = `❌ API Error: Failed to load member data.
 
-Token may be invalid or expired.
-
-Please try:
-1. Go to https://trello.com/app-keys
-2. Generate a new token  
-3. Click Settings and update it`;
+Check the server Trello credentials in .env and try again.`;
             
             workspacesList.innerHTML = `
                 <div style="color: red; word-wrap: break-word; font-size: 12px;">${errorMsg}</div>
@@ -899,8 +838,8 @@ Please try:
         workspacesList.innerHTML = `
             <i class="bi bi-kanban me-2"></i> ${member.fullName || member.username || 'User'}
         `;
-        
-        await loadBoards(member.id);
+
+        await loadBoards(boards);
     } catch (error) {
         console.error('Error loading workspaces:', error);
         const workspacesList = document.querySelector('#workspacesList');
@@ -913,11 +852,9 @@ Please try:
 }
 
 // Load user's boards
-async function loadBoards(memberId) {
+async function loadBoards(boards = null) {
     try {
         console.log('=== Loading boards ===');
-        console.log('API Key:', TRELLO_API_KEY);
-        console.log('Token (first 30):', TRELLO_TOKEN ? TRELLO_TOKEN.substring(0, 30) + '...' : 'NONE');
         
         const projectsList = document.querySelector('#projectsList');
         if (!projectsList) {
@@ -927,12 +864,12 @@ async function loadBoards(memberId) {
         
         projectsList.innerHTML = `<span style="color: #0066cc;">Fetching boards...</span>`;
         
-        const boards = await trelloAPI(`/members/me/boards`);
+        const boardList = Array.isArray(boards) ? boards : await trelloAPI(`/members/me/boards`);
         
-        console.log('Boards response:', boards);
-        console.log('Number of boards:', boards ? boards.length : 0);
+        console.log('Boards response:', boardList);
+        console.log('Number of boards:', boardList ? boardList.length : 0);
         
-        if (!boards) {
+        if (!boardList) {
             console.error('Boards is null - API call failed');
             projectsList.innerHTML = `
                 <p style="color: red; font-size: 12px;">❌ API Error: Failed to load boards. Check console for details.</p>
@@ -940,7 +877,7 @@ async function loadBoards(memberId) {
             return;
         }
         
-        if (boards.length === 0) {
+        if (boardList.length === 0) {
             projectsList.innerHTML = `
                 <p class="text-muted small">No boards found. Create one at <a href="https://trello.com" target="_blank">Trello.com</a></p>
             `;
@@ -948,7 +885,7 @@ async function loadBoards(memberId) {
         }
         
         let boardsHTML = '';
-        boards.forEach(board => {
+        boardList.forEach(board => {
             console.log('Processing board:', board.name, board.id);
             const color = getColorForBoard(board.name);
             boardsHTML += `
@@ -973,9 +910,9 @@ async function loadBoards(memberId) {
         }
         
         // Load first board by default
-        if (boards.length > 0) {
-            console.log('Loading first board:', boards[0].name);
-            await selectBoard(boards[0].id, boards[0].name);
+        if (boardList.length > 0) {
+            console.log('Loading first board:', boardList[0].name);
+            await selectBoard(boardList[0].id, boardList[0].name);
         }
     } catch (error) {
         console.error('Error loading boards:', error);
@@ -1028,58 +965,55 @@ async function selectBoard(boardId, boardName) {
     
     try {
         console.log('Loading lists for board:', boardName);
-        
-        // Load lists and cards in parallel for better performance
-        const lists = await trelloAPI(`/boards/${boardId}/lists`);
+
+        // Load lists and all board cards in one batch to reduce API round-trips.
+        const [lists, boardCards] = await Promise.all([
+            trelloAPI(`/boards/${boardId}/lists`),
+            trelloAPI(`/boards/${boardId}/cards?fields=name,due,idList,idMembers,desc&members=true&member_fields=fullName,username&checklists=all`)
+        ]);
         
         if (!lists) {
             console.error('No lists returned for board:', boardId);
+            setViewLoading(false);
             return;
         }
         
         console.log('Lists loaded:', lists.length);
-        
-        // Load all cards in parallel instead of one by one
-        const cardsPromises = lists.map(list => 
-            trelloAPI(`/lists/${list.id}/cards`)
-        );
-        
-        const cardsResults = await Promise.all(cardsPromises);
-        
-        // Attach cards to their respective lists
-        lists.forEach((list, index) => {
-            list.cards = cardsResults[index] || [];
+
+        const cardsByListId = new Map();
+
+        if (Array.isArray(boardCards)) {
+            boardCards.forEach((card) => {
+                card.checklists = Array.isArray(card.checklists) ? card.checklists : [];
+
+                const bucket = cardsByListId.get(card.idList) || [];
+                bucket.push(card);
+                cardsByListId.set(card.idList, bucket);
+            });
+        } else {
+            console.warn('Board-level cards endpoint failed, falling back to list-level card loading.');
+            const cardsResults = await Promise.all(
+                lists.map(list => trelloAPI(`/lists/${list.id}/cards?fields=name,due,idList,idMembers,desc&members=true&member_fields=fullName,username&checklists=all`))
+            );
+
+            lists.forEach((list, index) => {
+                const cards = (cardsResults[index] || []).map((card) => ({
+                    ...card,
+                    checklists: Array.isArray(card.checklists) ? card.checklists : []
+                }));
+                cardsByListId.set(list.id, cards);
+            });
+        }
+
+        lists.forEach((list) => {
+            list.cards = cardsByListId.get(list.id) || [];
         });
 
-        // Render dashboard/calendar views immediately from lists+cards,
-        // then enrich with checklists asynchronously to avoid perceived 5s delays.
-        console.log('Cards loaded. Rendering initial board views immediately...');
-
+        console.log('Cards loaded. Rendering board views...');
         currentBoardLists = lists.map(list => ({ ...list, cards: [...(list.cards || [])] }));
         initializeFilterMenus(currentBoardLists);
         refreshBoardViewsWithFilters();
         setViewLoading(false);
-
-        const allCards = lists.flatMap(list => list.cards || []);
-        Promise.all(
-            allCards.map(async card => {
-                try {
-                    return await trelloAPI(`/cards/${card.id}/checklists`);
-                } catch (error) {
-                    console.error('Error fetching checklist for card:', card.id, error);
-                    return [];
-                }
-            })
-        ).then((checklistResults) => {
-            allCards.forEach((card, index) => {
-                card.checklists = checklistResults[index] || [];
-            });
-
-            currentBoardLists = lists.map(list => ({ ...list, cards: [...(list.cards || [])] }));
-            refreshBoardViewsWithFilters();
-            console.log('Checklist enrichment complete. Board views refreshed.');
-            setViewLoading(false);
-        });
     } catch (error) {
         console.error('Error loading board:', error);
         setViewLoading(false);
@@ -1119,9 +1053,20 @@ async function loadTableView(lists) {
         }
     });
     
+    const totalRows = allCards.length;
+    const totalPages = Math.max(1, Math.ceil(totalRows / tableViewPageSize));
+    if (tableViewCurrentPage > totalPages) {
+        tableViewCurrentPage = totalPages;
+    }
+    if (tableViewCurrentPage < 1) {
+        tableViewCurrentPage = 1;
+    }
+
+    const startIndex = (tableViewCurrentPage - 1) * tableViewPageSize;
+    const pageCards = allCards.slice(startIndex, startIndex + tableViewPageSize);
     let tableHTML = '';
     
-    if (allCards.length === 0) {
+    if (pageCards.length === 0) {
         tableHTML = `
             <tr>
                 <td colspan="7" class="text-center text-muted py-4">
@@ -1130,7 +1075,7 @@ async function loadTableView(lists) {
             </tr>
         `;
     } else {
-        allCards.forEach(card => {
+        pageCards.forEach(card => {
             const dueDate = card.due ? new Date(card.due).toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'short',
@@ -1180,8 +1125,7 @@ async function loadTableView(lists) {
                                 <i class="bi bi-three-dots-vertical"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); event.stopPropagation(); updateCard('${card.id}', '${escapeJsString(card.name)}'); return false;"><i class="bi bi-pencil me-2"></i>Update</a></li>
-                                <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); event.stopPropagation(); insertTask('${card.listId}'); return false;"><i class="bi bi-plus-circle me-2"></i>Insert</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); event.stopPropagation(); updateCard('${card.id}', '${escapeJsString(card.name)}'); return false;"><i class="bi bi-pencil me-2"></i>Update Task</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item text-danger" href="#" onclick="event.preventDefault(); event.stopPropagation(); deleteCard('${card.id}', '${escapeJsString(card.name)}'); return false;"><i class="bi bi-trash me-2"></i>Delete</a></li>
                             </ul>
@@ -1196,6 +1140,8 @@ async function loadTableView(lists) {
     if (tasksTable) {
         tasksTable.innerHTML = tableHTML;
     }
+
+    updateTablePaginationUI(totalRows, totalPages, startIndex, pageCards.length);
 }
 
 // Delete a card
@@ -1227,71 +1173,328 @@ async function deleteCard(cardId, cardName) {
 
 // Update a card
 async function updateCard(cardId, cardName) {
-    const newName = prompt('Update task name:', cardName);
-    const normalizedNewName = (newName || '').trim();
-    const normalizedCurrentName = (cardName || '').trim();
-    
-    if (!normalizedNewName || normalizedNewName === normalizedCurrentName) {
-        return;
-    }
-    
-    try {
-        const result = await trelloAPI(`/cards/${cardId}`, 'PUT', {
-            name: normalizedNewName
-        });
-        
-        if (result) {
-            alert('✅ Task updated successfully!');
-            
-            // Reload current board
-            if (currentBoardId) {
-                const boardName = allBoards.find(b => b.id === currentBoardId)?.name || 'Board';
-                selectBoard(currentBoardId, boardName);
-            }
-        } else {
-            alert('Failed to update task.');
-        }
-    } catch (error) {
-        console.error('Error updating card:', error);
-        alert('Error updating task: ' + error.message);
-    }
+    await editCardDetails(cardId);
 }
 
 // Insert a new task
-async function insertTask(listId) {
+async function insertTask(listId, listName = '', sourceCardId = '') {
     if (!listId) {
         alert('Cannot insert task: target list is missing. Please reload the board and try again.');
         return;
     }
 
-    const taskName = prompt('Enter new task name:');
-    const normalizedTaskName = (taskName || '').trim();
-    
-    if (!normalizedTaskName) {
+    let checklistText = '';
+    if (sourceCardId) {
+        try {
+            const sourceChecklists = await trelloAPI(`/cards/${sourceCardId}/checklists`);
+            const preferredChecklist = (sourceChecklists || []).find((checklist) => {
+                return normalizeListName(checklist?.name || '') === 'progression steps';
+            }) || (sourceChecklists || [])[0];
+
+            const checklistItems = preferredChecklist?.checkItems || [];
+            checklistText = checklistItems
+                .map((item) => String(item?.name || '').trim())
+                .filter(Boolean)
+                .join('\n');
+        } catch (error) {
+            console.warn('Unable to preload checklist template for insert:', error);
+        }
+    }
+
+    showQuickTaskActionModal({
+        mode: 'insert',
+        listId,
+        listName,
+        sourceCardId,
+        checklistText
+    });
+}
+
+function ensureQuickTaskActionModal() {
+    let modalEl = document.querySelector('#quickTaskActionModal');
+    if (modalEl) {
+        return modalEl;
+    }
+
+    const modalHTML = `
+        <div class="modal fade" id="quickTaskActionModal" tabindex="-1" aria-labelledby="quickTaskActionModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="quickTaskActionModalLabel">Task Action</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted small mb-2" id="quickTaskActionHint"></p>
+                        <div class="mb-3">
+                            <label for="quickTaskActionName" class="form-label">Task Name</label>
+                            <input type="text" class="form-control" id="quickTaskActionName" placeholder="Enter task name">
+                        </div>
+                        <div class="mb-3" id="quickTaskActionListGroup">
+                            <label for="quickTaskActionList" class="form-label">Insert To List</label>
+                            <select class="form-select" id="quickTaskActionList"></select>
+                        </div>
+                        <div class="mb-3" id="quickTaskActionChecklistGroup">
+                            <label for="quickTaskActionChecklist" class="form-label">Progression Steps</label>
+                            <textarea class="form-control" id="quickTaskActionChecklist" rows="6" placeholder="One step per line"></textarea>
+                            <div class="form-text">One line equals one checklist item in Trello.</div>
+                        </div>
+                        <div>
+                            <label for="quickTaskActionContent" class="form-label" id="quickTaskActionContentLabel">Task Content</label>
+                            <textarea class="form-control" id="quickTaskActionContent" rows="5" placeholder="Add task content"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="quickTaskActionSaveBtn">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    modalEl = document.querySelector('#quickTaskActionModal');
+
+    const saveBtn = modalEl.querySelector('#quickTaskActionSaveBtn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', handleQuickTaskActionSave);
+    }
+
+    const listSelect = modalEl.querySelector('#quickTaskActionList');
+    if (listSelect) {
+        listSelect.addEventListener('change', () => {
+            const saveButton = modalEl.querySelector('#quickTaskActionSaveBtn');
+            if (saveButton) {
+                saveButton.dataset.listId = listSelect.value || '';
+            }
+        });
+    }
+
+    return modalEl;
+}
+
+function populateQuickTaskListOptions(listSelect, preferredListId = '') {
+    if (!listSelect) {
         return;
     }
-    
-    try {
-        const newCard = await trelloAPI('/cards', 'POST', {
-            name: normalizedTaskName,
-            idList: listId,
-            pos: 'top'
-        });
-        
-        if (newCard) {
-            alert('✅ Task created successfully!');
-            
-            // Reload current board
-            if (currentBoardId) {
-                const boardName = allBoards.find(b => b.id === currentBoardId)?.name || 'Board';
-                selectBoard(currentBoardId, boardName);
-            }
+
+    const listCollection = Array.isArray(currentBoardLists) ? currentBoardLists : [];
+    const availableLists = listCollection
+        .filter(list => list && list.id && list.name)
+        .map((list) => ({
+            id: String(list.id),
+            name: String(list.name),
+            count: Array.isArray(list.cards) ? list.cards.length : 0
+        }));
+
+    const selectedId = String(preferredListId || availableLists[0]?.id || '');
+    listSelect.innerHTML = '';
+
+    availableLists.forEach((list) => {
+        const option = document.createElement('option');
+        option.value = list.id;
+        option.textContent = `${list.name} (${list.count})`;
+        if (list.id === selectedId) {
+            option.selected = true;
+        }
+        listSelect.appendChild(option);
+    });
+
+    if (!availableLists.length) {
+        const option = document.createElement('option');
+        option.value = String(preferredListId || '');
+        option.textContent = 'No lists available';
+        option.selected = true;
+        listSelect.appendChild(option);
+    }
+}
+
+function showQuickTaskActionModal(options) {
+    const modalEl = ensureQuickTaskActionModal();
+    const titleEl = modalEl.querySelector('#quickTaskActionModalLabel');
+    const hintEl = modalEl.querySelector('#quickTaskActionHint');
+    const nameInput = modalEl.querySelector('#quickTaskActionName');
+    const listGroup = modalEl.querySelector('#quickTaskActionListGroup');
+    const listSelect = modalEl.querySelector('#quickTaskActionList');
+    const checklistGroup = modalEl.querySelector('#quickTaskActionChecklistGroup');
+    const checklistInput = modalEl.querySelector('#quickTaskActionChecklist');
+    const contentLabel = modalEl.querySelector('#quickTaskActionContentLabel');
+    const contentInput = modalEl.querySelector('#quickTaskActionContent');
+    const saveBtn = modalEl.querySelector('#quickTaskActionSaveBtn');
+
+    const mode = options?.mode === 'update' ? 'update' : 'insert';
+    const cardName = (options?.cardName || '').trim();
+    const cardDescription = options?.cardDescription || '';
+    const checklistText = options?.checklistText || '';
+    const preferredListId = (options?.listId || '').trim();
+    const listName = (options?.listName || '').trim();
+
+    if (titleEl) {
+        titleEl.textContent = mode === 'update' ? 'Edit Task Content' : 'Insert Task';
+    }
+
+    if (hintEl) {
+        hintEl.textContent = mode === 'update'
+            ? 'Update task content/description for this Trello card.'
+            : listName
+                ? `Choose a list below and create a new task (opened from "${listName}").`
+                : 'Choose a list below and create a new task.';
+    }
+
+    if (nameInput) {
+        nameInput.value = mode === 'update' ? cardName : '';
+        nameInput.readOnly = mode === 'update';
+    }
+
+    if (contentLabel) {
+        contentLabel.textContent = mode === 'update' ? 'Task Content' : 'Task Content (Optional)';
+    }
+
+    if (contentInput) {
+        contentInput.value = mode === 'update' ? cardDescription : '';
+    }
+
+    if (listGroup) {
+        listGroup.style.display = mode === 'insert' ? '' : 'none';
+    }
+
+    if (listSelect && mode === 'insert') {
+        populateQuickTaskListOptions(listSelect, preferredListId);
+    }
+
+    if (checklistGroup) {
+        checklistGroup.style.display = mode === 'insert' ? '' : 'none';
+    }
+
+    if (checklistInput) {
+        checklistInput.value = mode === 'insert' ? checklistText : '';
+    }
+
+    if (saveBtn) {
+        saveBtn.textContent = mode === 'update' ? 'Update Content' : 'Create Task';
+        saveBtn.dataset.mode = mode;
+        saveBtn.dataset.cardId = options?.cardId || '';
+        saveBtn.dataset.listId = mode === 'insert' ? (listSelect?.value || preferredListId) : '';
+        saveBtn.dataset.sourceCardId = options?.sourceCardId || '';
+        saveBtn.dataset.originalName = cardName;
+        saveBtn.dataset.originalDescription = cardDescription;
+    }
+
+    quickTaskActionModalInstance = quickTaskActionModalInstance || bootstrap.Modal.getOrCreateInstance(modalEl);
+    quickTaskActionModalInstance.show();
+
+    requestAnimationFrame(() => {
+        if (mode === 'update') {
+            contentInput?.focus();
         } else {
-            alert('Failed to create task.');
+            nameInput?.focus();
+            nameInput?.select();
+        }
+    });
+}
+
+async function handleQuickTaskActionSave(event) {
+    const saveBtn = event?.currentTarget;
+    const modalEl = document.querySelector('#quickTaskActionModal');
+    const nameInput = modalEl?.querySelector('#quickTaskActionName');
+    const listSelect = modalEl?.querySelector('#quickTaskActionList');
+    const checklistInput = modalEl?.querySelector('#quickTaskActionChecklist');
+    const contentInput = modalEl?.querySelector('#quickTaskActionContent');
+
+    if (!saveBtn || !nameInput || !contentInput || !checklistInput) {
+        return;
+    }
+
+    const mode = saveBtn.dataset.mode === 'update' ? 'update' : 'insert';
+    const cardId = saveBtn.dataset.cardId || '';
+    const listId = (listSelect?.value || saveBtn.dataset.listId || '').trim();
+    const originalName = (saveBtn.dataset.originalName || '').trim();
+    const originalDescription = saveBtn.dataset.originalDescription || '';
+    const taskName = (nameInput.value || '').trim();
+    const checklistSteps = (checklistInput.value || '')
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+    const taskContent = contentInput.value || '';
+
+    if (mode === 'insert' && !taskName) {
+        alert('Task name is required.');
+        nameInput.focus();
+        return;
+    }
+
+    if (mode === 'update' && taskContent === originalDescription) {
+        quickTaskActionModalInstance?.hide();
+        return;
+    }
+
+    const originalBtnLabel = saveBtn.textContent;
+    saveBtn.disabled = true;
+    saveBtn.textContent = mode === 'update' ? 'Updating...' : 'Creating...';
+
+    try {
+        if (mode === 'update') {
+            if (!cardId) {
+                throw new Error('Missing card ID for update.');
+            }
+
+            const result = await trelloAPI(`/cards/${cardId}`, 'PUT', {
+                desc: taskContent
+            });
+
+            if (!result) {
+                throw new Error('Failed to update task content.');
+            }
+
+            alert('✅ Task content updated successfully!');
+        } else {
+            if (!listId) {
+                throw new Error('Missing list ID for insert.');
+            }
+
+            const result = await trelloAPI('/cards', 'POST', {
+                name: taskName,
+                idList: listId,
+                pos: 'top',
+                desc: taskContent
+            });
+
+            if (!result) {
+                throw new Error('Failed to create task.');
+            }
+
+            if (checklistSteps.length > 0) {
+                const checklist = await trelloAPI(`/cards/${result.id}/checklists`, 'POST', {
+                    name: 'Progression Steps'
+                });
+
+                if (checklist?.id) {
+                    for (const stepName of checklistSteps) {
+                        await trelloAPI(`/checklists/${checklist.id}/checkItems`, 'POST', {
+                            name: stepName,
+                            pos: 'bottom'
+                        });
+                    }
+                }
+            }
+
+            alert('✅ Task created successfully!');
+        }
+
+        quickTaskActionModalInstance?.hide();
+
+        if (currentBoardId) {
+            const boardName = allBoards.find(b => b.id === currentBoardId)?.name || 'Board';
+            selectBoard(currentBoardId, boardName);
         }
     } catch (error) {
-        console.error('Error creating card:', error);
-        alert('Error creating task: ' + error.message);
+        const actionLabel = mode === 'update' ? 'updating' : 'creating';
+        console.error(`Error ${actionLabel} card:`, error);
+        alert(`Error ${actionLabel} task: ${error.message}`);
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalBtnLabel || 'Save';
     }
 }
 
@@ -1645,7 +1848,31 @@ const CALENDAR_NOTES_STORAGE_KEY = 'calendarPersonalNotes';
 function getCalendarNotes() {
     try {
         const notes = JSON.parse(localStorage.getItem(CALENDAR_NOTES_STORAGE_KEY) || '[]');
-        return Array.isArray(notes) ? notes : [];
+        if (!Array.isArray(notes)) {
+            return [];
+        }
+
+        return notes.map((entry) => {
+            const category = ['note', 'event', 'reminder', 'document'].includes(entry?.category)
+                ? entry.category
+                : 'note';
+
+            return {
+                id: entry?.id || `note_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                date: normalizeCalendarDateString(entry?.date),
+                category,
+                title: String(entry?.title || '').trim(),
+                text: String(entry?.text || '').trim(),
+                priority: ['high', 'normal', 'low'].includes(entry?.priority) ? entry.priority : 'normal',
+                status: entry?.status === 'done' ? 'done' : 'open',
+                eventTime: String(entry?.eventTime || '').trim(),
+                reminderAt: String(entry?.reminderAt || '').trim(),
+                documentName: String(entry?.documentName || '').trim(),
+                documentUrl: String(entry?.documentUrl || '').trim(),
+                createdAt: entry?.createdAt || new Date().toISOString(),
+                updatedAt: entry?.updatedAt || entry?.createdAt || new Date().toISOString()
+            };
+        }).filter((entry) => entry.date);
     } catch (error) {
         console.warn('Failed to read calendar notes:', error);
         return [];
@@ -1673,6 +1900,17 @@ function getCalendarNotesForDay(year, month, day) {
             noteDate.getFullYear() === year &&
             noteDate.getMonth() === month &&
             noteDate.getDate() === day;
+    }).sort((a, b) => {
+        if ((a.status === 'done') !== (b.status === 'done')) {
+            return a.status === 'done' ? 1 : -1;
+        }
+
+        const priorityDelta = getCalendarEntryPriorityRank(a.priority) - getCalendarEntryPriorityRank(b.priority);
+        if (priorityDelta !== 0) {
+            return priorityDelta;
+        }
+
+        return getCalendarEntryTimeSortValue(a) - getCalendarEntryTimeSortValue(b);
     });
 }
 
@@ -1681,11 +1919,110 @@ function getCalendarNoteModalElements() {
         modal: document.querySelector('#calendarNoteModal'),
         dateLabel: document.querySelector('#calendarNoteModalDateLabel'),
         noteDateInput: document.querySelector('#calendarNoteDate'),
+        noteTypeInput: document.querySelector('#calendarNoteType'),
+        noteTitleInput: document.querySelector('#calendarNoteTitle'),
+        priorityInput: document.querySelector('#calendarEntryPriority'),
+        statusInput: document.querySelector('#calendarEntryStatus'),
         noteTextInput: document.querySelector('#calendarNoteText'),
+        eventTimeInput: document.querySelector('#calendarEntryTime'),
+        reminderInput: document.querySelector('#calendarEntryReminder'),
+        documentNameInput: document.querySelector('#calendarEntryDocumentName'),
+        documentUrlInput: document.querySelector('#calendarEntryDocumentUrl'),
+        eventTimeField: document.querySelector('#calendarEntryTimeField'),
+        reminderField: document.querySelector('#calendarEntryReminderField'),
+        documentNameField: document.querySelector('#calendarEntryDocumentNameField'),
+        documentUrlField: document.querySelector('#calendarEntryDocumentUrlField'),
         addButton: document.querySelector('#addCalendarNoteBtn'),
         notesCount: document.querySelector('#calendarNotesCount'),
         notesList: document.querySelector('#calendarNotesList')
     };
+}
+
+function getCalendarEntryIcon(category) {
+    if (category === 'event') return '📅';
+    if (category === 'reminder') return '⏰';
+    if (category === 'document') return '📎';
+    return '📝';
+}
+
+function getCalendarEntryPriorityRank(priority) {
+    if (priority === 'high') return 0;
+    if (priority === 'normal') return 1;
+    return 2;
+}
+
+function getCalendarEntryTimeSortValue(entry) {
+    if (entry?.category === 'reminder' && entry?.reminderAt) {
+        const reminderDate = new Date(entry.reminderAt);
+        if (!Number.isNaN(reminderDate.getTime())) {
+            return reminderDate.getTime();
+        }
+    }
+
+    if (entry?.category === 'event' && entry?.eventTime && entry?.date) {
+        const eventDate = new Date(`${entry.date}T${entry.eventTime}`);
+        if (!Number.isNaN(eventDate.getTime())) {
+            return eventDate.getTime();
+        }
+    }
+
+    const createdAt = new Date(entry?.createdAt || '');
+    if (!Number.isNaN(createdAt.getTime())) {
+        return createdAt.getTime();
+    }
+
+    return Number.MAX_SAFE_INTEGER;
+}
+
+function getCalendarEntryValidationError(entry) {
+    const category = entry?.category || 'note';
+
+    if (category === 'event' && !entry?.eventTime) {
+        return 'Event entries require an event time.';
+    }
+
+    if (category === 'reminder' && !entry?.reminderAt) {
+        return 'Reminder entries require a reminder date and time.';
+    }
+
+    if (category === 'document' && !entry?.documentName && !entry?.documentUrl) {
+        return 'Document entries need a document name or URL.';
+    }
+
+    if (!entry?.title && !entry?.text && !entry?.documentName && !entry?.documentUrl) {
+        return 'Please add a title or details before saving.';
+    }
+
+    return '';
+}
+
+function buildCalendarEntrySummary(entry) {
+    const title = String(entry?.title || '').trim();
+    const text = String(entry?.text || '').trim();
+    const docName = String(entry?.documentName || '').trim();
+    const fallback = text || docName || 'Entry';
+    return title || fallback;
+}
+
+function updateCalendarEntryFieldVisibility() {
+    const elements = getCalendarNoteModalElements();
+    const selectedType = elements.noteTypeInput?.value || 'note';
+
+    if (elements.eventTimeField) {
+        elements.eventTimeField.style.display = selectedType === 'event' ? '' : 'none';
+    }
+
+    if (elements.reminderField) {
+        elements.reminderField.style.display = selectedType === 'reminder' ? '' : 'none';
+    }
+
+    const showDocumentFields = selectedType === 'document';
+    if (elements.documentNameField) {
+        elements.documentNameField.style.display = showDocumentFields ? '' : 'none';
+    }
+    if (elements.documentUrlField) {
+        elements.documentUrlField.style.display = showDocumentFields ? '' : 'none';
+    }
 }
 
 function renderCalendarNoteModal() {
@@ -1696,7 +2033,20 @@ function renderCalendarNoteModal() {
 
     const selectedDate = currentCalendarNoteDate || normalizeCalendarDateString(currentCalendarDate.toISOString());
     const selectedDateObject = selectedDate ? new Date(`${selectedDate}T00:00:00`) : null;
-    const notes = getCalendarNotes().filter((note) => note.date === selectedDate).sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
+    const notes = getCalendarNotes()
+        .filter((note) => note.date === selectedDate)
+        .sort((a, b) => {
+            if ((a.status === 'done') !== (b.status === 'done')) {
+                return a.status === 'done' ? 1 : -1;
+            }
+
+            const priorityDelta = getCalendarEntryPriorityRank(a.priority) - getCalendarEntryPriorityRank(b.priority);
+            if (priorityDelta !== 0) {
+                return priorityDelta;
+            }
+
+            return getCalendarEntryTimeSortValue(a) - getCalendarEntryTimeSortValue(b);
+        });
 
     if (elements.dateLabel) {
         elements.dateLabel.textContent = selectedDateObject && !Number.isNaN(selectedDateObject.getTime())
@@ -1713,7 +2063,34 @@ function renderCalendarNoteModal() {
         const editingNote = currentCalendarEditingNoteId
             ? notes.find((note) => note.id === currentCalendarEditingNoteId)
             : null;
+        if (elements.noteTypeInput) {
+            elements.noteTypeInput.value = editingNote?.category || 'note';
+        }
+        if (elements.noteTitleInput) {
+            elements.noteTitleInput.value = editingNote ? (editingNote.title || '') : '';
+        }
+        if (elements.priorityInput) {
+            elements.priorityInput.value = editingNote?.priority || 'normal';
+        }
+        if (elements.statusInput) {
+            elements.statusInput.value = editingNote?.status || 'open';
+        }
         elements.noteTextInput.value = editingNote ? (editingNote.text || '') : '';
+        if (elements.eventTimeInput) {
+            elements.eventTimeInput.value = editingNote ? (editingNote.eventTime || '') : '';
+        }
+        if (elements.reminderInput) {
+            elements.reminderInput.value = editingNote ? (editingNote.reminderAt || '') : '';
+        }
+        if (elements.documentNameInput) {
+            elements.documentNameInput.value = editingNote ? (editingNote.documentName || '') : '';
+        }
+        if (elements.documentUrlInput) {
+            elements.documentUrlInput.value = editingNote ? (editingNote.documentUrl || '') : '';
+        }
+
+        updateCalendarEntryFieldVisibility();
+
         if (elements.addButton) {
             elements.addButton.innerHTML = editingNote
                 ? '<i class="bi bi-check-lg me-1"></i> Save'
@@ -1721,10 +2098,10 @@ function renderCalendarNoteModal() {
         }
     }
 
-    elements.notesCount.textContent = `${notes.length} note${notes.length === 1 ? '' : 's'}`;
+    elements.notesCount.textContent = `${notes.length} entr${notes.length === 1 ? 'y' : 'ies'}`;
 
     if (!notes.length) {
-        elements.notesList.innerHTML = '<div class="text-muted small">No notes for this date yet.</div>';
+        elements.notesList.innerHTML = '<div class="text-muted small">No entries for this date yet.</div>';
         return;
     }
 
@@ -1743,13 +2120,26 @@ function renderCalendarNoteModal() {
         return `
             <div class="calendar-note-item" data-note-id="${escapeHtml(note.id)}">
                 <div class="calendar-note-meta">
-                    <strong>${escapeHtml(createdLabel)}</strong>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="calendar-entry-type-badge ${escapeHtml(note.category || 'note')}">${escapeHtml(note.category || 'note')}</span>
+                        <span class="calendar-entry-priority ${escapeHtml(note.priority || 'normal')}">${escapeHtml(note.priority || 'normal')}</span>
+                        ${note.status === 'done' ? '<span class="calendar-entry-state-done">Done</span>' : ''}
+                        <strong>${escapeHtml(createdLabel)}</strong>
+                    </div>
                     <div class="d-flex gap-2 align-items-center">
+                        <button type="button" class="btn btn-sm btn-link text-success p-0 calendar-note-toggle" data-note-id="${escapeHtml(note.id)}">${note.status === 'done' ? 'Reopen' : 'Mark done'}</button>
                         <button type="button" class="btn btn-sm btn-link text-primary p-0 calendar-note-edit" data-note-id="${escapeHtml(note.id)}">Edit</button>
                         <button type="button" class="btn btn-sm btn-link text-danger p-0 calendar-note-delete" data-note-id="${escapeHtml(note.id)}">Delete</button>
                     </div>
                 </div>
-                <div class="calendar-note-text">${escapeHtml(note.text)}</div>
+                <div class="calendar-note-text ${note.status === 'done' ? 'is-done' : ''}">
+                    ${escapeHtml(buildCalendarEntrySummary(note))}
+                    ${note.text ? `<div class="calendar-entry-extra">${escapeHtml(note.text)}</div>` : ''}
+                    ${note.eventTime ? `<div class="calendar-entry-extra">Event time: ${escapeHtml(note.eventTime)}</div>` : ''}
+                    ${note.reminderAt ? `<div class="calendar-entry-extra">Reminder: ${escapeHtml(note.reminderAt.replace('T', ' '))}</div>` : ''}
+                    ${note.documentName ? `<div class="calendar-entry-extra">Document: ${escapeHtml(note.documentName)}</div>` : ''}
+                    ${note.documentUrl ? `<div class="calendar-entry-extra"><a href="${escapeHtml(note.documentUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(note.documentUrl)}</a></div>` : ''}
+                </div>
             </div>
         `;
     }).join('');
@@ -1775,12 +2165,43 @@ function resetCalendarNoteEditorState() {
 
 function addCalendarNote() {
     const noteDateInput = document.querySelector('#calendarNoteDate');
+    const noteTypeInput = document.querySelector('#calendarNoteType');
+    const noteTitleInput = document.querySelector('#calendarNoteTitle');
+    const priorityInput = document.querySelector('#calendarEntryPriority');
+    const statusInput = document.querySelector('#calendarEntryStatus');
     const noteTextInput = document.querySelector('#calendarNoteText');
-    if (!noteDateInput || !noteTextInput) return;
+    const eventTimeInput = document.querySelector('#calendarEntryTime');
+    const reminderInput = document.querySelector('#calendarEntryReminder');
+    const documentNameInput = document.querySelector('#calendarEntryDocumentName');
+    const documentUrlInput = document.querySelector('#calendarEntryDocumentUrl');
+    if (!noteDateInput || !noteTextInput || !noteTypeInput || !noteTitleInput || !priorityInput || !statusInput) return;
 
     const dateValue = normalizeCalendarDateString(noteDateInput.value || currentCalendarDate.toISOString());
+    const category = String(noteTypeInput.value || 'note').trim();
+    const title = String(noteTitleInput.value || '').trim();
+    const priority = String(priorityInput.value || 'normal').trim();
+    const status = String(statusInput.value || 'open').trim();
     const noteText = String(noteTextInput.value || '').trim();
-    if (!dateValue || !noteText) {
+    const eventTime = String(eventTimeInput?.value || '').trim();
+    const reminderAt = String(reminderInput?.value || '').trim();
+    const documentName = String(documentNameInput?.value || '').trim();
+    const documentUrl = String(documentUrlInput?.value || '').trim();
+
+    const entryDraft = {
+        category,
+        title,
+        text: noteText,
+        eventTime,
+        reminderAt,
+        documentName,
+        documentUrl
+    };
+
+    const validationError = getCalendarEntryValidationError(entryDraft);
+    if (!dateValue || validationError) {
+        if (validationError) {
+            alert(validationError);
+        }
         return;
     }
 
@@ -1793,7 +2214,15 @@ function addCalendarNote() {
             notes[index] = {
                 ...notes[index],
                 date: dateValue,
+                category,
+                title,
+                priority,
+                status,
                 text: noteText,
+                eventTime,
+                reminderAt,
+                documentName,
+                documentUrl,
                 updatedAt: now
             };
         }
@@ -1801,23 +2230,40 @@ function addCalendarNote() {
         notes.unshift({
             id: `note_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
             date: dateValue,
+            category,
+            title,
+            priority,
+            status,
             text: noteText,
+            eventTime,
+            reminderAt,
+            documentName,
+            documentUrl,
             createdAt: now,
             updatedAt: now
         });
     }
     saveCalendarNotes(notes);
+    noteTitleInput.value = '';
+    priorityInput.value = 'normal';
+    statusInput.value = 'open';
     noteTextInput.value = '';
+    if (eventTimeInput) eventTimeInput.value = '';
+    if (reminderInput) reminderInput.value = '';
+    if (documentNameInput) documentNameInput.value = '';
+    if (documentUrlInput) documentUrlInput.value = '';
     currentCalendarNoteDate = dateValue;
     const wasEditing = Boolean(currentCalendarEditingNoteId);
     const savedNoteId = currentCalendarEditingNoteId;
     currentCalendarEditingNoteId = '';
     renderCalendar();
     renderCalendarNoteModal();
+    loadCalendarOverviewView(currentBoardLists);
     emitHciInteraction(wasEditing ? 'calendar_note_updated' : 'calendar_note_added', {
         noteId: savedNoteId || undefined,
         date: dateValue,
-        textPreview: noteText.slice(0, 80)
+        entryType: category,
+        textPreview: (title || noteText).slice(0, 80)
     });
 }
 
@@ -1829,7 +2275,31 @@ function deleteCalendarNote(noteId) {
     }
     renderCalendar();
     renderCalendarNoteModal();
+    loadCalendarOverviewView(currentBoardLists);
     emitHciInteraction('calendar_note_deleted', { noteId });
+}
+
+function toggleCalendarNoteStatus(noteId) {
+    const notes = getCalendarNotes();
+    const index = notes.findIndex((note) => note.id === noteId);
+    if (index === -1) {
+        return;
+    }
+
+    notes[index] = {
+        ...notes[index],
+        status: notes[index].status === 'done' ? 'open' : 'done',
+        updatedAt: new Date().toISOString()
+    };
+
+    saveCalendarNotes(notes);
+    renderCalendar();
+    renderCalendarNoteModal();
+    loadCalendarOverviewView(currentBoardLists);
+    emitHciInteraction('calendar_note_status_toggled', {
+        noteId,
+        status: notes[index].status
+    });
 }
 
 function openCalendarNoteEditor(dateValue) {
@@ -1930,10 +2400,11 @@ function getFilteredCalendarOverviewRows() {
         const statusMatch = calendarOverviewStatusFilter === 'all' || statusValue === calendarOverviewStatusFilter;
         const dueMatch = rowMatchesOverviewDueFilter(row);
         const taskName = String(row.name || '').toLowerCase();
+        const details = String(row.details || '').toLowerCase();
         const status = statusValue;
         const dueDate = formatOverviewDate(row.dueDate).toLowerCase();
         const createdDate = formatOverviewDate(row.createdDate).toLowerCase();
-        const queryMatch = !query || taskName.includes(query) || status.includes(query) || dueDate.includes(query) || createdDate.includes(query);
+        const queryMatch = !query || taskName.includes(query) || details.includes(query) || status.includes(query) || dueDate.includes(query) || createdDate.includes(query);
         return statusMatch && dueMatch && queryMatch;
     });
 }
@@ -1960,7 +2431,7 @@ function renderCalendarOverviewList() {
     const pagedRows = filteredRows.slice(startIndex, startIndex + calendarOverviewPageSize);
 
     if (stats) {
-        stats.textContent = `${totalRows} task${totalRows === 1 ? '' : 's'}`;
+        stats.textContent = `${totalRows} entr${totalRows === 1 ? 'y' : 'ies'}`;
     }
 
     if (pageInfo) {
@@ -1975,16 +2446,25 @@ function renderCalendarOverviewList() {
 
     if (!totalRows) {
         const noResultsText = calendarOverviewSearchQuery
-            ? 'No tasks match your search.'
-            : 'No tasks found for this project.';
+            ? 'No entries match your search.'
+            : 'No entries found for this project/date.';
         listContainer.innerHTML = `<div class="text-muted py-4 text-center">${noResultsText}</div>`;
         return;
     }
 
     listContainer.innerHTML = pagedRows.map((row) => {
         const statusClass = getCalendarOverviewStatusClass(row.listName);
+        const defaultDate = normalizeCalendarDateString(currentCalendarDate.toISOString());
+        const plannerDate = escapeHtml(row.entryDate || defaultDate);
+        const clickHandler = row.entryType === 'planner'
+            ? `openCalendarNoteEditor('${plannerDate}')`
+            : `showCardDetails('${escapeHtml(row.id)}')`;
+        const keyboardHandler = row.entryType === 'planner'
+            ? `if(event.key==='Enter'){openCalendarNoteEditor('${plannerDate}')}`
+            : `if(event.key==='Enter'){showCardDetails('${escapeHtml(row.id)}')}`;
+
         return `
-            <div class="calendar-overview-item" role="button" tabindex="0" onclick="showCardDetails('${row.id}')" onkeydown="if(event.key==='Enter'){showCardDetails('${row.id}')}">
+            <div class="calendar-overview-item" role="button" tabindex="0" onclick="${clickHandler}" onkeydown="${keyboardHandler}">
                 <div class="calendar-overview-task" title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</div>
                 <div class="calendar-overview-date">
                     <span class="label">Due Date</span>
@@ -2000,6 +2480,42 @@ function renderCalendarOverviewList() {
             </div>
         `;
     }).join('');
+}
+
+function getPlannerOverviewRows() {
+    const entries = getCalendarNotes();
+
+    return entries.map((entry) => {
+        const baseDate = normalizeCalendarDateString(entry.date || '');
+        const createdDate = entry.createdAt ? new Date(entry.createdAt) : (baseDate ? new Date(`${baseDate}T00:00:00`) : null);
+
+        let dueDate = null;
+        if (entry.category === 'event' && entry.eventTime && baseDate) {
+            dueDate = new Date(`${baseDate}T${entry.eventTime}`);
+        } else if (entry.category === 'reminder' && entry.reminderAt) {
+            dueDate = new Date(entry.reminderAt);
+        } else if (baseDate) {
+            dueDate = new Date(`${baseDate}T00:00:00`);
+        }
+
+        if (dueDate && Number.isNaN(dueDate.getTime())) {
+            dueDate = null;
+        }
+
+        const statusLabel = entry.status === 'done' ? 'Done' : 'Open';
+
+        return {
+            id: entry.id,
+            entryType: 'planner',
+            entryDate: baseDate,
+            name: buildCalendarEntrySummary(entry),
+            listName: `Planner ${entry.category || 'note'} (${statusLabel})`,
+            details: `${entry.text || ''} ${entry.documentName || ''} ${entry.documentUrl || ''}`.trim(),
+            createdDate: createdDate && !Number.isNaN(createdDate.getTime()) ? createdDate : null,
+            dueDate,
+            rankingDate: dueDate || createdDate || null
+        };
+    });
 }
 
 function setupCalendarOverviewControls() {
@@ -2112,14 +2628,18 @@ function loadCalendarOverviewView(lists) {
 
             rows.push({
                 id: card.id,
+                entryType: 'card',
                 name: card.name,
                 listName: list.name,
+                details: card.desc || '',
                 createdDate,
                 dueDate,
                 rankingDate
             });
         });
     });
+
+    rows.push(...getPlannerOverviewRows());
 
     rows.sort((a, b) => {
         const aTime = a.rankingDate && !Number.isNaN(a.rankingDate.getTime()) ? a.rankingDate.getTime() : Number.MAX_SAFE_INTEGER;
@@ -2270,7 +2790,9 @@ function renderCalendar() {
         if (notesOnDay.length > 0) {
             calendarHTML += '<div class="day-notes">';
             notesOnDay.slice(0, 2).forEach((note) => {
-                calendarHTML += `<div class="calendar-note-pill" title="${escapeHtml(note.text)}">📝 ${escapeHtml(note.text.substring(0, 18))}${note.text.length > 18 ? '...' : ''}</div>`;
+                const summary = buildCalendarEntrySummary(note);
+                const icon = getCalendarEntryIcon(note.category);
+                calendarHTML += `<div class="calendar-note-pill" title="${escapeHtml(summary)}">${icon} ${escapeHtml(summary.substring(0, 18))}${summary.length > 18 ? '...' : ''}</div>`;
             });
             if (notesOnDay.length > 2) {
                 calendarHTML += `<div class="calendar-note-pill more">+${notesOnDay.length - 2} more</div>`;
@@ -2335,11 +2857,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     applyEmbedViewMode();
     setupCalendarTabTelemetry();
     setupCalendarOverviewControls();
+    setupTablePaginationControls();
     bindTabLoadingIndicators();
     const addCalendarNoteBtn = document.querySelector('#addCalendarNoteBtn');
     const calendarNotesList = document.querySelector('#calendarNotesList');
+    const calendarNoteType = document.querySelector('#calendarNoteType');
     if (addCalendarNoteBtn) {
         addCalendarNoteBtn.addEventListener('click', addCalendarNote);
+    }
+    if (calendarNoteType) {
+        calendarNoteType.addEventListener('change', updateCalendarEntryFieldVisibility);
     }
     const calendarNoteModal = document.querySelector('#calendarNoteModal');
     if (calendarNoteModal) {
@@ -2350,6 +2877,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if (calendarNotesList) {
         calendarNotesList.addEventListener('click', (event) => {
+            const toggleBtn = event.target.closest('.calendar-note-toggle');
+            if (toggleBtn) {
+                toggleCalendarNoteStatus(toggleBtn.dataset.noteId);
+                return;
+            }
             const editBtn = event.target.closest('.calendar-note-edit');
             if (editBtn) {
                 beginCalendarNoteEdit(editBtn.dataset.noteId);
@@ -3971,6 +4503,267 @@ function cleanupModalArtifacts() {
     document.body.style.removeProperty('overflow');
 }
 
+let currentEditChecklistDragItem = null;
+let deletedEditCheckItemIds = new Set();
+
+function parseChecklistItemAssignees(rawName) {
+    const value = String(rawName || '').trim();
+    if (!value) {
+        return { title: '', assignees: [] };
+    }
+
+    const splitMarker = '→';
+    if (!value.includes(splitMarker)) {
+        return { title: value, assignees: [] };
+    }
+
+    const [titlePart, assigneePart] = value.split(splitMarker);
+    const assignees = String(assigneePart || '')
+        .split(',')
+        .map((name) => name.trim())
+        .filter(Boolean)
+        .filter((name) => normalizeListName(name) !== 'unassigned');
+
+    return {
+        title: String(titlePart || '').trim(),
+        assignees
+    };
+}
+
+function getEditChecklistAssignees(row) {
+    const raw = String(row?.dataset?.assignees || '').trim();
+    if (!raw) {
+        return [];
+    }
+
+    return raw
+        .split(',')
+        .map((name) => name.trim())
+        .filter(Boolean)
+        .filter((name) => normalizeListName(name) !== 'unassigned');
+}
+
+function updateEditChecklistAssigneeSummary(row) {
+    if (!row) {
+        return;
+    }
+
+    const summaryElement = row.querySelector('.edit-checkitem-assignees');
+    const assignees = getEditChecklistAssignees(row);
+    const summaryText = assignees.length ? `Assigned: ${assignees.join(', ')}` : 'Assigned: Unassigned';
+
+    if (summaryElement) {
+        summaryElement.textContent = summaryText;
+    }
+}
+
+function openEditChecklistAssignModal(row) {
+    if (!row) {
+        return;
+    }
+
+    const existing = document.querySelector('#editChecklistAssignModal');
+    if (existing) {
+        const existingInstance = bootstrap.Modal.getInstance(existing);
+        if (existingInstance) {
+            existingInstance.dispose();
+        }
+        existing.remove();
+    }
+
+    const selectedSet = new Set(getEditChecklistAssignees(row).map((name) => name.toLowerCase()));
+    const employeeOptions = (Array.isArray(employees) ? employees : []).map((employee) => {
+        const displayName = String(employee?.name || '').trim();
+        if (!displayName) {
+            return '';
+        }
+
+        const checked = selectedSet.has(displayName.toLowerCase()) ? 'checked' : '';
+        return `
+            <label class="form-check d-flex align-items-center gap-2 mb-2">
+                <input class="form-check-input edit-checkitem-assign-option" type="checkbox" value="${escapeHtml(displayName)}" ${checked}>
+                <span class="form-check-label">${escapeHtml(displayName)}</span>
+            </label>
+        `;
+    }).join('');
+
+    const modalHtml = `
+        <div class="modal fade" id="editChecklistAssignModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Assign Employees</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        ${employeeOptions || '<p class="text-muted small mb-0">No employees available.</p>'}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="saveChecklistAssignBtn">Save Assignment</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modalElement = document.querySelector('#editChecklistAssignModal');
+    const modal = new bootstrap.Modal(modalElement);
+
+    const saveBtn = modalElement.querySelector('#saveChecklistAssignBtn');
+    saveBtn?.addEventListener('click', () => {
+        const selectedNames = Array.from(modalElement.querySelectorAll('.edit-checkitem-assign-option:checked'))
+            .map((input) => String(input.value || '').trim())
+            .filter(Boolean);
+
+        row.dataset.assignees = selectedNames.join(', ');
+        updateEditChecklistAssigneeSummary(row);
+        modal.hide();
+    });
+
+    modalElement.addEventListener('hidden.bs.modal', () => {
+        modal.dispose();
+        modalElement.remove();
+    });
+
+    modal.show();
+}
+
+function buildEditChecklistItemRow(item, checklistId, isNew = false) {
+    const itemId = isNew ? '' : String(item?.id || '');
+    const itemNameRaw = String(item?.name || '').trim();
+    const parsed = parseChecklistItemAssignees(itemNameRaw);
+    const itemName = parsed.title || itemNameRaw;
+    const itemAssignees = parsed.assignees;
+    const itemState = String(item?.state || 'incomplete');
+    const checked = itemState === 'complete' ? 'checked' : '';
+    const assigneesText = itemAssignees.length ? `Assigned: ${itemAssignees.join(', ')}` : 'Assigned: Unassigned';
+
+    return `
+        <div class="row g-2 align-items-center mb-2 edit-checkitem-row" draggable="true" data-checklist-id="${escapeHtml(checklistId)}" data-item-id="${escapeHtml(itemId)}" data-is-new="${isNew ? 'true' : 'false'}" data-assignees="${escapeHtml(itemAssignees.join(', '))}">
+            <div class="col-auto">
+                <button type="button" class="btn btn-sm btn-light edit-checkitem-drag" title="Drag to reorder" aria-label="Drag to reorder">
+                    <i class="bi bi-grip-vertical"></i>
+                </button>
+            </div>
+            <div class="col-auto">
+                <input
+                    type="checkbox"
+                    class="form-check-input edit-checkitem-state"
+                    data-item-id="${escapeHtml(itemId)}"
+                    data-original-state="${escapeHtml(itemState)}"
+                    ${checked}
+                >
+            </div>
+            <div class="col">
+                <input
+                    type="text"
+                    class="form-control form-control-sm edit-checkitem-name"
+                    data-item-id="${escapeHtml(itemId)}"
+                    data-original-name="${escapeHtml(itemName)}"
+                    data-original-full-name="${escapeHtml(itemNameRaw)}"
+                    value="${escapeHtml(itemName)}"
+                    placeholder="Checklist task"
+                >
+                <div class="small text-muted mt-1 edit-checkitem-assignees">${escapeHtml(assigneesText)}</div>
+            </div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-sm btn-outline-secondary edit-checkitem-assign" title="Assign employees" aria-label="Assign employees">
+                    <i class="bi bi-people"></i>
+                </button>
+            </div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-sm btn-outline-danger edit-checkitem-remove" title="Remove task" aria-label="Remove task">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function resetEditChecklistDragState(root = document) {
+    currentEditChecklistDragItem = null;
+    root.querySelectorAll('.edit-checkitem-row').forEach((row) => {
+        row.classList.remove('dragging', 'drag-over');
+    });
+}
+
+function handleEditChecklistDragStart(event) {
+    const row = event.currentTarget?.classList?.contains('edit-checkitem-row')
+        ? event.currentTarget
+        : event.target.closest('.edit-checkitem-row');
+
+    if (!row) {
+        return;
+    }
+
+    currentEditChecklistDragItem = row;
+    row.classList.add('dragging');
+
+    if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', row.dataset.itemId || row.dataset.checklistId || 'checkitem');
+    }
+}
+
+function handleEditChecklistDragOver(event) {
+    if (!currentEditChecklistDragItem) {
+        return;
+    }
+
+    event.preventDefault();
+
+    const targetRow = event.currentTarget?.classList?.contains('edit-checkitem-row')
+        ? event.currentTarget
+        : event.target.closest('.edit-checkitem-row');
+
+    if (!targetRow || targetRow === currentEditChecklistDragItem) {
+        return;
+    }
+
+    const targetContainer = targetRow.closest('.edit-checklist-items');
+    const sourceContainer = currentEditChecklistDragItem.closest('.edit-checklist-items');
+    if (!targetContainer || !sourceContainer || targetContainer !== sourceContainer) {
+        return;
+    }
+
+    targetContainer.querySelectorAll('.edit-checkitem-row').forEach((row) => {
+        row.classList.remove('drag-over');
+    });
+    targetRow.classList.add('drag-over');
+
+    const targetRect = targetRow.getBoundingClientRect();
+    const shouldPlaceAfter = event.clientY > targetRect.top + targetRect.height / 2;
+    if (shouldPlaceAfter) {
+        targetRow.after(currentEditChecklistDragItem);
+    } else {
+        targetRow.before(currentEditChecklistDragItem);
+    }
+}
+
+function handleEditChecklistDragEnd(event) {
+    const root = event?.currentTarget?.closest('#editCardModal') || document;
+    resetEditChecklistDragState(root);
+}
+
+function refreshEditChecklistDragBindings(root = document) {
+    root.querySelectorAll('.edit-checkitem-row').forEach((row) => {
+        row.draggable = true;
+        row.ondragstart = handleEditChecklistDragStart;
+        row.ondragover = handleEditChecklistDragOver;
+        row.ondragend = handleEditChecklistDragEnd;
+
+        const dragHandle = row.querySelector('.edit-checkitem-drag');
+        if (dragHandle) {
+            dragHandle.draggable = true;
+            dragHandle.ondragstart = handleEditChecklistDragStart;
+            dragHandle.ondragend = handleEditChecklistDragEnd;
+            dragHandle.onmousedown = (dragEvent) => dragEvent.preventDefault();
+        }
+    });
+}
+
 // Edit card details
 async function editCardDetails(cardId) {
     const detailsModalElement = document.querySelector('#cardDetailsModal');
@@ -3992,41 +4785,24 @@ async function editCardDetails(cardId) {
         const checklists = await trelloAPI(`/cards/${cardId}/checklists`) || [];
 
         let checklistEditorHtml = '';
+        deletedEditCheckItemIds = new Set();
         if (checklists.length === 0) {
             checklistEditorHtml = '<p class="text-muted small mb-0">No checklist tasks found for this card.</p>';
         } else {
             checklistEditorHtml = checklists.map(checklist => {
-                const itemsHtml = (checklist.checkItems || []).map(item => {
-                    const checked = item.state === 'complete' ? 'checked' : '';
-                    return `
-                        <div class="row g-2 align-items-center mb-2">
-                            <div class="col-auto">
-                                <input
-                                    type="checkbox"
-                                    class="form-check-input edit-checkitem-state"
-                                    data-item-id="${item.id}"
-                                    data-original-state="${item.state || 'incomplete'}"
-                                    ${checked}
-                                >
-                            </div>
-                            <div class="col">
-                                <input
-                                    type="text"
-                                    class="form-control form-control-sm edit-checkitem-name"
-                                    data-item-id="${item.id}"
-                                    data-original-name="${escapeHtml(item.name || '')}"
-                                    value="${escapeHtml(item.name || '')}"
-                                    placeholder="Checklist task"
-                                >
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+                const itemsHtml = (checklist.checkItems || []).map(item => buildEditChecklistItemRow(item, checklist.id, false)).join('');
 
                 return `
                     <div class="border rounded p-2 mb-3">
-                        <div class="fw-semibold mb-2">${escapeHtml(checklist.name || 'Checklist')}</div>
-                        ${itemsHtml || '<p class="text-muted small mb-0">No items in this checklist.</p>'}
+                        <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
+                            <div class="fw-semibold">${escapeHtml(checklist.name || 'Checklist')}</div>
+                            <button type="button" class="btn btn-sm btn-outline-primary edit-checkitem-add" data-checklist-id="${escapeHtml(checklist.id)}">
+                                <i class="bi bi-plus-lg me-1"></i>Add Task
+                            </button>
+                        </div>
+                        <div class="edit-checklist-items" data-checklist-id="${escapeHtml(checklist.id)}">
+                            ${itemsHtml || '<p class="text-muted small mb-0">No items in this checklist.</p>'}
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -4079,6 +4855,63 @@ async function editCardDetails(cardId) {
         document.body.insertAdjacentHTML('beforeend', editModalHtml);
         const editModalElement = document.querySelector('#editCardModal');
         const editModal = new bootstrap.Modal(editModalElement);
+
+        editModalElement.addEventListener('click', (event) => {
+            const assignBtn = event.target.closest('.edit-checkitem-assign');
+            if (assignBtn) {
+                const row = assignBtn.closest('.edit-checkitem-row');
+                openEditChecklistAssignModal(row);
+                return;
+            }
+
+            const addBtn = event.target.closest('.edit-checkitem-add');
+            if (addBtn) {
+                const checklistId = addBtn.dataset.checklistId || '';
+                const container = editModalElement.querySelector(`.edit-checklist-items[data-checklist-id="${checklistId}"]`);
+                if (!container) {
+                    return;
+                }
+
+                const emptyState = container.querySelector('p.text-muted.small');
+                if (emptyState) {
+                    emptyState.remove();
+                }
+
+                const rowHtml = buildEditChecklistItemRow({ id: '', name: '', state: 'incomplete' }, checklistId, true);
+                container.insertAdjacentHTML('beforeend', rowHtml);
+                refreshEditChecklistDragBindings(editModalElement);
+                const newRow = container.querySelector('.edit-checkitem-row:last-child');
+                updateEditChecklistAssigneeSummary(newRow);
+
+                const newInput = container.querySelector('.edit-checkitem-row:last-child .edit-checkitem-name');
+                newInput?.focus();
+                return;
+            }
+
+            const removeBtn = event.target.closest('.edit-checkitem-remove');
+            if (!removeBtn) {
+                return;
+            }
+
+            const row = removeBtn.closest('.edit-checkitem-row');
+            if (!row) {
+                return;
+            }
+
+            const existingItemId = String(row.dataset.itemId || '').trim();
+            if (existingItemId) {
+                deletedEditCheckItemIds.add(existingItemId);
+            }
+
+            const parentContainer = row.closest('.edit-checklist-items');
+            row.remove();
+
+            if (parentContainer && !parentContainer.querySelector('.edit-checkitem-row')) {
+                parentContainer.innerHTML = '<p class="text-muted small mb-0">No items in this checklist.</p>';
+            }
+        });
+
+        refreshEditChecklistDragBindings(editModalElement);
         editModal.show();
 
         editModalElement.addEventListener('hidden.bs.modal', () => {
@@ -4122,44 +4955,82 @@ async function saveEditedCardDetails(cardId) {
             throw new Error('Failed to update card details.');
         }
 
-        const taskInputs = document.querySelectorAll('.edit-checkitem-name');
+        for (const itemId of deletedEditCheckItemIds) {
+            const deleted = await trelloAPI(`/cards/${cardId}/checkItem/${itemId}`, 'DELETE');
+            if (deleted === null) {
+                throw new Error('Failed to delete one or more checklist tasks.');
+            }
+            clearChecklistCheckedBy(cardId, itemId);
+        }
 
-        for (const taskInput of taskInputs) {
-            const itemId = taskInput.dataset.itemId;
-            const originalName = taskInput.dataset.originalName || '';
-            const newName = (taskInput.value || '').trim();
-            if (!itemId || !newName) {
+        const checklistContainers = document.querySelectorAll('.edit-checklist-items[data-checklist-id]');
+        for (const container of checklistContainers) {
+            const checklistId = container.dataset.checklistId;
+            if (!checklistId) {
                 continue;
             }
 
-            const stateCheckbox = document.querySelector(`.edit-checkitem-state[data-item-id="${itemId}"]`);
-            const originalState = stateCheckbox?.dataset.originalState || 'incomplete';
-            const nextState = stateCheckbox?.checked ? 'complete' : 'incomplete';
+            const rows = Array.from(container.querySelectorAll('.edit-checkitem-row'));
+            for (let index = 0; index < rows.length; index += 1) {
+                const row = rows[index];
+                const itemId = String(row.dataset.itemId || '').trim();
+                const nameInput = row.querySelector('.edit-checkitem-name');
+                const stateCheckbox = row.querySelector('.edit-checkitem-state');
+                const newName = String(nameInput?.value || '').trim();
+                const assignees = getEditChecklistAssignees(row);
+                const persistedName = assignees.length ? `${newName} → ${assignees.join(', ')}` : newName;
 
-            const nameChanged = newName !== originalName;
-            const stateChanged = nextState !== originalState;
+                if (!newName) {
+                    continue;
+                }
 
-            if (!nameChanged && !stateChanged) {
-                continue;
-            }
+                const nextState = stateCheckbox?.checked ? 'complete' : 'incomplete';
+                const posValue = (index + 1) * 2048;
 
-            const updatedItem = await trelloAPI(`/cards/${cardId}/checkItem/${itemId}`, 'PUT', {
-                name: newName,
-                state: nextState
-            });
+                if (itemId) {
+                    const originalFullName = String(nameInput?.dataset?.originalFullName || '').trim();
+                    const nameChanged = persistedName !== originalFullName;
+                    const originalState = String(stateCheckbox?.dataset?.originalState || 'incomplete').trim();
+                    const stateChanged = nextState !== originalState;
 
-            if (!updatedItem) {
-                throw new Error('Failed to update one or more checklist tasks.');
-            }
+                    if (!nameChanged && !stateChanged) {
+                        continue;
+                    }
 
-            if (stateChanged) {
-                if (nextState === 'complete') {
-                    setChecklistCheckedBy(cardId, itemId, getCurrentOperatorName());
+                    const updatedItem = await trelloAPI(`/cards/${cardId}/checkItem/${itemId}`, 'PUT', {
+                        name: persistedName,
+                        state: nextState,
+                        pos: posValue
+                    });
+
+                    if (!updatedItem) {
+                        throw new Error('Failed to update one or more checklist tasks.');
+                    }
+
+                    if (nextState === 'complete') {
+                        setChecklistCheckedBy(cardId, itemId, getCurrentOperatorName());
+                    } else {
+                        clearChecklistCheckedBy(cardId, itemId);
+                    }
                 } else {
-                    clearChecklistCheckedBy(cardId, itemId);
+                    const createdItem = await trelloAPI(`/checklists/${checklistId}/checkItems`, 'POST', {
+                        name: persistedName,
+                        checked: nextState === 'complete',
+                        pos: posValue
+                    });
+
+                    if (!createdItem || !createdItem.id) {
+                        throw new Error('Failed to add one or more checklist tasks.');
+                    }
+
+                    if (nextState === 'complete') {
+                        setChecklistCheckedBy(cardId, createdItem.id, getCurrentOperatorName());
+                    }
                 }
             }
         }
+
+        deletedEditCheckItemIds = new Set();
 
         const editModalElement = document.querySelector('#editCardModal');
         const editModal = editModalElement ? bootstrap.Modal.getInstance(editModalElement) : null;
@@ -4341,7 +5212,6 @@ async function updateChecklistItem(cardId, checkItemId, isComplete) {
 
 // Show settings modal
 function showSettings() {
-    const hasToken = localStorage.getItem('trelloToken');
     const modalHTML = `
         <div class="modal fade" id="settingsModal" tabindex="-1">
             <div class="modal-dialog">
@@ -4351,22 +5221,12 @@ function showSettings() {
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <h6>Trello Token</h6>
-                        <p class="text-muted small">Your token is stored securely in your browser.</p>
-                        <div class="input-group mb-3">
-                            <input type="password" class="form-control" id="settingsTokenInput" 
-                                   placeholder="Paste your Trello token here">
-                            <button class="btn btn-outline-secondary" type="button" onclick="toggleTokenVisibility()">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                        </div>
-                        <small class="d-block mb-3">
-                            Get your token from: <a href="https://trello.com/app-keys" target="_blank">https://trello.com/app-keys</a>
-                        </small>
+                        <h6>Trello Connection</h6>
+                        <p class="text-muted small mb-0">The Trello token is configured on the server, so it is not exposed in the browser.</p>
+                        <p class="text-muted small mt-2 mb-3">If the connection fails, update the Trello values in the project .env file and reload the page.</p>
                         <button class="btn btn-sm btn-success w-100 mb-2" onclick="testAndUpdateToken()">
-                            <i class="bi bi-check-circle me-2"></i> Test & Save Token
+                            <i class="bi bi-arrow-clockwise me-2"></i> Test Connection
                         </button>
-                        ${hasToken ? '<button class="btn btn-sm btn-danger w-100" onclick="clearToken()">Clear Token</button>' : ''}
                     </div>
                 </div>
             </div>
@@ -4382,57 +5242,35 @@ function showSettings() {
 }
 
 function toggleTokenVisibility() {
-    const input = document.querySelector('#settingsTokenInput');
-    input.type = input.type === 'password' ? 'text' : 'password';
+    return;
 }
 
 async function testAndUpdateToken() {
-    const token = document.querySelector('#settingsTokenInput').value.trim();
-    
-    if (!token) {
-        alert('Please enter a token');
-        return;
-    }
-    
-    console.log('Testing token: ' + token.substring(0, 10) + '...');
-    
     try {
-        const url = `${TRELLO_API_URL}/members/me?key=${TRELLO_API_KEY}&token=${token}`;
-        console.log('Test URL:', url);
-        
-        const response = await fetch(url);
-        console.log('Test response status:', response.status);
-        
-        if (response.ok) {
-            const data = await response.json();
-            localStorage.setItem('trelloToken', token);
-            TRELLO_TOKEN = token;
-            
-            alert(`✅ Token is valid!\n\nLogged in as: ${data.fullName || data.username}`);
+        const data = await trelloAPI('/members/me');
+
+        if (data) {
+            alert(`✅ Trello connection is working!\n\nLogged in as: ${data.fullName || data.username || 'unknown user'}`);
             const modal = bootstrap.Modal.getInstance(document.querySelector('#settingsModal'));
             modal.hide();
             document.querySelector('#settingsModal').remove();
             
             // Reload data
             loadWorkspaces();
-        } else {
-            const errorText = await response.text();
-            console.error('Token test failed:', errorText);
-            alert(`❌ Token test failed (Status: ${response.status})\n\nPlease make sure:\n1. You have a valid Trello token\n2. You copied it correctly from https://trello.com/app-keys`);
+            return;
         }
+
+        alert('❌ Trello connection failed. Check the server .env values and try again.');
     } catch (error) {
-        console.error('Error testing token:', error);
+        console.error('Error testing Trello connection:', error);
         alert(`❌ Error: ${error.message}\n\nCheck browser console (F12) for more details`);
     }
 }
 
 function clearToken() {
-    if (confirm('Are you sure you want to clear your token? You will need to enter it again.')) {
-        localStorage.removeItem('trelloToken');
-        TRELLO_TOKEN = null;
-        const modal = bootstrap.Modal.getInstance(document.querySelector('#settingsModal'));
+    const modal = bootstrap.Modal.getInstance(document.querySelector('#settingsModal'));
+    if (modal) {
         modal.hide();
-        location.reload();
     }
 }
 

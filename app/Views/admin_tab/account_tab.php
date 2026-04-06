@@ -86,7 +86,7 @@
         background: #f8fbff;
         padding: 8px 10px;
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: minmax(150px, 1.15fr) minmax(190px, 1.4fr) minmax(140px, 1fr) minmax(92px, 0.7fr) minmax(120px, 0.9fr) 64px;
         align-items: center;
         gap: 10px;
         margin-bottom: 8px;
@@ -108,6 +108,12 @@
         text-align: center;
     }
 
+    .account-list-head .head-email,
+    .account-list-head .head-phone,
+    .account-list-head .head-last-entered {
+        text-align: left;
+    }
+
     .account-list-head .head-edit {
         text-align: center;
     }
@@ -118,7 +124,7 @@
         background: #f4f5f7;
         padding: 8px 10px;
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: minmax(150px, 1.15fr) minmax(190px, 1.4fr) minmax(140px, 1fr) minmax(92px, 0.7fr) minmax(120px, 0.9fr) 64px;
         align-items: center;
         gap: 10px;
         cursor: pointer;
@@ -147,6 +153,20 @@
         color: #5e6d8e;
         font-size: 0.79rem;
         line-height: 1.25;
+    }
+
+    .account-email,
+    .account-phone,
+    .account-last-entered {
+        color: #5e6d8e;
+        font-size: 0.82rem;
+        line-height: 1.2;
+        text-align: left;
+    }
+
+    .account-last-entered {
+        color: #42557d;
+        font-weight: 600;
     }
 
     .account-role {
@@ -361,6 +381,9 @@
             gap: 6px;
         }
 
+        .account-list-head .head-email,
+        .account-list-head .head-phone,
+        .account-list-head .head-last-entered,
         .account-list-head .head-users,
         .account-list-head .head-edit {
             width: auto;
@@ -394,7 +417,10 @@
 
         <div class="account-list-head" aria-hidden="true">
             <span class="head-name">Name</span>
+            <span class="head-email">Email</span>
+            <span class="head-phone">Phone Number</span>
             <span class="head-users">Users</span>
+            <span class="head-last-entered">Last Entered</span>
             <span class="head-edit">Edit</span>
         </div>
 
@@ -724,6 +750,38 @@
             .replaceAll('"', '&quot;')
             .replaceAll("'", '&#39;');
 
+        const extractDateFromDetails = (details) => {
+            const match = String(details || '').match(/Date Joined:\s*([0-9]{2,4}-[0-9]{2}-[0-9]{2})/i);
+            return match ? match[1] : '';
+        };
+
+        const formatDateForDisplay = (value) => {
+            const raw = String(value || '').trim();
+            if (!raw) {
+                return '-';
+            }
+
+            const parts = raw.split('-');
+            if (parts.length !== 3) {
+                return raw;
+            }
+
+            if (parts[0].length === 4) {
+                return `${parts[1]}-${parts[2]}-${parts[0]}`;
+            }
+
+            return raw;
+        };
+
+        const getLastEnteredDate = (account) => {
+            const explicit = String(account?.lastEntered || '').trim();
+            if (explicit) {
+                return explicit;
+            }
+
+            return extractDateFromDetails(account?.details);
+        };
+
         const render = () => {
             const query = (searchInput.value || '').trim().toLowerCase();
             const selectedRole = roleFilter.value;
@@ -745,9 +803,11 @@
                 <article class="account-item" data-id="${account.id}" data-open-account="${account.id}" tabindex="0" role="button" aria-label="View or edit ${escapeHtml(account.name)}">
                     <div>
                         <strong>${escapeHtml(account.name)}</strong>
-                        <p>${escapeHtml(account.details)}</p>
                     </div>
+                    <div class="account-email">${escapeHtml(account.email || '-')}</div>
+                    <div class="account-phone">${escapeHtml(account.phone || '-')}</div>
                     <span class="account-role ${escapeHtml(account.role)}">${escapeHtml(account.role)}</span>
+                    <div class="account-last-entered">${escapeHtml(formatDateForDisplay(getLastEnteredDate(account)))}</div>
                     <button type="button" class="account-edit-btn" data-edit-id="${account.id}" title="Edit account">✎</button>
                 </article>
             `).join('');
@@ -842,11 +902,12 @@
                         email,
                         phone,
                         details,
+                        lastEntered: joined,
                     };
                 });
             } else {
                 const nextId = accounts.length ? Math.max(...accounts.map((a) => a.id)) + 1 : 1;
-                accounts = [{ id: nextId, firstName, lastName, name, role, employeeRole, email, phone, details }, ...accounts];
+                accounts = [{ id: nextId, firstName, lastName, name, role, employeeRole, email, phone, details, lastEntered: joined }, ...accounts];
             }
 
             saveAccounts();

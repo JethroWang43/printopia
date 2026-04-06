@@ -48,10 +48,54 @@
         border-radius: 10px;
         padding: 10px;
         display: grid;
-        grid-template-columns: minmax(220px, 1.35fr) minmax(150px, 0.9fr) minmax(130px, 0.8fr) auto auto;
+        grid-template-columns: minmax(220px, 1.2fr) minmax(170px, 0.75fr) minmax(160px, 0.75fr);
         gap: 10px;
         margin-bottom: 14px;
         background: #fffdfd;
+        align-items: start;
+    }
+
+    .gallery-upload-row {
+        border: 1px solid #f0c9c9;
+        border-radius: 10px;
+        padding: 10px;
+        display: grid;
+        gap: 8px;
+        background: #fffdfd;
+        margin-bottom: 14px;
+    }
+
+    .gallery-upload-config {
+        border: 1px solid #d1daeb;
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 8px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) auto;
+        gap: 8px;
+        align-items: center;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .gallery-upload-config .gallery-field {
+        min-height: 36px;
+        border-color: #d9e1ef;
+        padding: 0 10px;
+    }
+
+    .gallery-labeled-field {
+        display: grid;
+        gap: 4px;
+        min-width: 0;
+    }
+
+    .gallery-labeled-field label {
+        font-size: 0.72rem;
+        font-weight: 800;
+        color: #5a6b8f;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
     }
 
     .gallery-field {
@@ -103,6 +147,18 @@
         color: #1a588f;
     }
 
+    .gallery-folder-hint {
+        border: 1px solid #d4deef;
+        border-radius: 8px;
+        background: #f4f7fd;
+        color: #3f5380;
+        font-size: 0.78rem;
+        font-weight: 700;
+        padding: 8px 10px;
+        line-height: 1.25;
+        word-break: break-word;
+    }
+
     .gallery-upload-btn {
         border: 1px solid #7f1d1d;
         color: #ffffff;
@@ -114,6 +170,14 @@
         font-size: 0.86rem;
         font-weight: 700;
         cursor: pointer;
+        white-space: nowrap;
+        align-self: stretch;
+        min-width: 126px;
+    }
+
+    .gallery-field select,
+    .gallery-field input {
+        min-width: 0;
     }
 
     .gallery-grid {
@@ -144,6 +208,18 @@
         display: block;
         border-bottom: 1px solid #e4eaf5;
         background: #f3f6fc;
+    }
+
+    .gallery-thumb-file {
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        display: grid;
+        place-items: center;
+        border-bottom: 1px solid #e4eaf5;
+        background: linear-gradient(180deg, #eef2f9 0%, #e2e9f6 100%);
+        color: #546b98;
+        font-size: 1rem;
+        font-weight: 800;
     }
 
     .gallery-card-body {
@@ -207,6 +283,185 @@
         grid-column: 1 / -1;
     }
 
+    .gallery-preview-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 17, 34, 0.62);
+        z-index: 10020;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+    }
+
+    .gallery-preview-card {
+        width: min(1040px, 100%);
+        max-height: calc(100vh - 36px);
+        background: #ffffff;
+        border-radius: 14px;
+        border: 1px solid #d6dfed;
+        box-shadow: 0 22px 34px rgba(10, 20, 48, 0.25);
+        display: grid;
+        grid-template-rows: auto 1fr;
+        overflow: hidden;
+    }
+
+    .gallery-preview-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        border-bottom: 1px solid #e2eaf8;
+        padding: 10px 14px;
+    }
+
+    .gallery-preview-title {
+        min-width: 0;
+        font-size: 0.96rem;
+        font-weight: 800;
+        color: #1d2e59;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .gallery-preview-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .gallery-preview-open {
+        border: 1px solid #c4d0ea;
+        border-radius: 8px;
+        background: #ffffff;
+        color: #39527f;
+        padding: 6px 10px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .gallery-preview-close {
+        width: 32px;
+        height: 32px;
+        border: 1px solid #d9e2f1;
+        border-radius: 8px;
+        background: #ffffff;
+        color: #40567f;
+        font-size: 1.05rem;
+        cursor: pointer;
+        line-height: 1;
+    }
+
+    .gallery-preview-body {
+        background: #f4f7fd;
+        overflow: auto;
+        padding: 12px;
+    }
+
+    .gallery-preview-body img {
+        width: 100%;
+        height: auto;
+        display: block;
+        border-radius: 10px;
+        border: 1px solid #dbe3f2;
+        background: #fff;
+    }
+
+    .gallery-preview-body iframe {
+        width: 100%;
+        min-height: 72vh;
+        border: 1px solid #dbe3f2;
+        border-radius: 10px;
+        background: #fff;
+    }
+
+    .gallery-preview-file-fallback {
+        border: 1px dashed #cfdaf0;
+        border-radius: 12px;
+        background: #ffffff;
+        color: #4b628f;
+        font-weight: 700;
+        text-align: center;
+        padding: 32px 12px;
+    }
+
+    .gallery-folder-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 12px;
+    }
+
+    .gallery-folder-item {
+        border: 1px solid #dbe3f2;
+        border-radius: 10px;
+        background: #ffffff;
+        overflow: hidden;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+    }
+
+    .gallery-folder-item.active {
+        border-color: #8f1d1d;
+        box-shadow: 0 0 0 2px rgba(143, 29, 29, 0.1);
+    }
+
+    .gallery-folder-thumb {
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        object-fit: cover;
+        display: block;
+        background: #f3f6fc;
+        border-bottom: 1px solid #e4eaf5;
+    }
+
+    .gallery-folder-file {
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        display: grid;
+        place-items: center;
+        color: #546b98;
+        font-size: 0.95rem;
+        font-weight: 800;
+        background: linear-gradient(180deg, #eef2f9 0%, #e2e9f6 100%);
+        border-bottom: 1px solid #e4eaf5;
+    }
+
+    .gallery-folder-meta {
+        padding: 10px;
+        display: grid;
+        gap: 6px;
+    }
+
+    .gallery-folder-name {
+        font-size: 0.85rem;
+        color: #1d2e59;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .gallery-folder-open {
+        border-top: 1px solid #e8eef9;
+        padding: 8px 10px;
+    }
+
+    .gallery-folder-open a {
+        display: block;
+        text-align: center;
+        border: 1px solid #c4d0ea;
+        border-radius: 8px;
+        color: #39527f;
+        text-decoration: none;
+        font-size: 0.78rem;
+        font-weight: 700;
+        padding: 6px 8px;
+        background: #fff;
+    }
+
     .gallery-pagination {
         display: flex;
         justify-content: center;
@@ -251,6 +506,7 @@
 
     @media (max-width: 900px) {
         .gallery-toolbar { grid-template-columns: 1fr; }
+        .gallery-upload-config { grid-template-columns: 1fr; }
         .gallery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
@@ -272,7 +528,7 @@
                 <div class="gallery-metric-value" id="galleryMetricStorage">0</div>
             </article>
             <article class="gallery-metric">
-                <div class="gallery-metric-top"><span>Categories</span><span>🗂</span></div>
+                <div class="gallery-metric-top"><span>Folders</span><span>🗂</span></div>
                 <div class="gallery-metric-value" id="galleryMetricCategories">0</div>
             </article>
             <article class="gallery-metric">
@@ -283,19 +539,52 @@
 
         <div class="gallery-toolbar">
             <div class="gallery-field">🔍 <input id="gallerySearchInput" type="text" placeholder="Search images by title or user folder"></div>
-            <div class="gallery-field">▾ <select id="galleryCategoryFilter"><option value="all">All Categories</option></select></div>
+            <div class="gallery-field">▾ <select id="galleryCategoryFilter"><option value="all">All Folders</option></select></div>
             <div class="gallery-field">▾ <select id="galleryTypeFilter"><option value="all">All Files</option></select></div>
-            <div class="gallery-view-toggle">
-                <button type="button" id="galleryGridViewBtn" class="active">▦ Grid</button>
-                <button type="button" id="galleryListViewBtn">▤ List</button>
+        </div>
+
+        <div class="gallery-upload-row">
+            <div class="gallery-upload-config">
+                <div class="gallery-labeled-field">
+                    <label for="galleryFolderConvention">Folder Rule</label>
+                    <div class="gallery-field">🧭 <select id="galleryFolderConvention">
+                <option value="manual" selected>Manual Path</option>
+                <option value="client-month">Client + Month</option>
+                <option value="project-month">Project + Month</option>
+                <option value="batch-day">Batch + Day</option>
+                    </select></div>
+                </div>
+                <div class="gallery-labeled-field">
+                    <label for="galleryUploadFolder">Target Folder</label>
+                    <div class="gallery-field">📁 <input id="galleryUploadFolder" type="text" value="" placeholder="Ex: admin_gallery/resources/customer"></div>
+                </div>
+                <button type="button" id="upload_widget_btn" class="gallery-upload-btn">⬆ Upload Images</button>
             </div>
-            <button type="button" id="upload_widget_btn" class="gallery-upload-btn">⬆ Upload Images</button>
+            <div class="gallery-folder-hint" id="galleryFolderHint">Upload path: not set</div>
+        </div>
+
+        <div class="gallery-view-toggle" style="margin-bottom: 14px;">
+            <button type="button" id="galleryGridViewBtn" class="active">▦ Grid</button>
+            <button type="button" id="galleryListViewBtn">▤ List</button>
         </div>
 
         <div class="gallery-grid" id="galleryCardGrid"></div>
         <div class="gallery-pagination" id="galleryPagination" aria-label="Gallery pagination"></div>
     </section>
 </article>
+
+<div id="galleryPreviewModal" class="gallery-preview-modal" role="dialog" aria-modal="true" aria-labelledby="galleryPreviewTitle">
+    <div class="gallery-preview-card">
+        <div class="gallery-preview-head">
+            <div id="galleryPreviewTitle" class="gallery-preview-title">Preview</div>
+            <div class="gallery-preview-actions">
+                <a id="galleryPreviewOpenLink" class="gallery-preview-open" href="#" target="_blank" rel="noopener noreferrer">Open New Tab</a>
+                <button type="button" id="galleryPreviewCloseBtn" class="gallery-preview-close" aria-label="Close preview">×</button>
+            </div>
+        </div>
+        <div id="galleryPreviewBody" class="gallery-preview-body"></div>
+    </div>
+</div>
 
 <div id="deleteModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
     <div style="background:white; padding:24px; border-radius:14px; width:90%; max-width:400px; text-align:center; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
@@ -317,6 +606,7 @@
         // Variables and Endpoints
         const endpoint = '<?= base_url('printopia/admin/gallery/files'); ?>';
         const saveEndpoint = '<?= base_url('printopia/admin/gallery/save_to_db'); ?>';
+        const openEndpointBase = '<?= base_url('printopia/admin/gallery/open'); ?>';
         let currentCsrfHash = '<?= csrf_hash() ?>';
         const csrfTokenName = '<?= csrf_token() ?>';
 
@@ -324,7 +614,15 @@
         const searchInput = document.querySelector('#gallerySearchInput');
         const categoryFilter = document.querySelector('#galleryCategoryFilter');
         const typeFilter = document.querySelector('#galleryTypeFilter');
+        const uploadFolderInput = document.querySelector('#galleryUploadFolder');
+        const folderConventionSelect = document.querySelector('#galleryFolderConvention');
+        const folderHint = document.querySelector('#galleryFolderHint');
         const grid = document.querySelector('#galleryCardGrid');
+        const previewModal = document.querySelector('#galleryPreviewModal');
+        const previewBody = document.querySelector('#galleryPreviewBody');
+        const previewTitle = document.querySelector('#galleryPreviewTitle');
+        const previewOpenLink = document.querySelector('#galleryPreviewOpenLink');
+        const previewCloseBtn = document.querySelector('#galleryPreviewCloseBtn');
         const gridBtn = document.querySelector('#galleryGridViewBtn');
         const listBtn = document.querySelector('#galleryListViewBtn');
         const pagination = document.querySelector('#galleryPagination');
@@ -339,6 +637,8 @@
             filtered: [],
             page: 1,
             perPage: 8,
+            uploadFolder: '',
+            autoBatchKey: ''
         };
 
         let fileIdToDelete = null;
@@ -352,6 +652,163 @@
             .replaceAll("'", '&#39;');
 
         const formatStorageMB = (bytes) => (bytes / (1024 * 1024)).toFixed(2);
+
+        const normalizeFolderValue = (value) => String(value || '')
+            .trim()
+            .replace(/\\/g, '/')
+            .replace(/^\/+|\/+$/g, '')
+            .replace(/\s+/g, '_');
+
+        const getMonthKey = () => {
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            return `${yyyy}-${mm}`;
+        };
+
+        const getDayKey = () => {
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        };
+
+        const getTimeKey = () => {
+            const now = new Date();
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mi = String(now.getMinutes()).padStart(2, '0');
+            const ss = String(now.getSeconds()).padStart(2, '0');
+            return `${hh}${mi}${ss}`;
+        };
+
+        const ensureAutoBatchKey = () => {
+            if (!state.autoBatchKey) {
+                const compactDay = getDayKey().replace(/-/g, '');
+                state.autoBatchKey = `batch_${compactDay}_${getTimeKey()}`;
+            }
+            return state.autoBatchKey;
+        };
+
+        const buildUploadFolderByConvention = () => {
+            const convention = folderConventionSelect?.value || 'client-month';
+            const label = ensureAutoBatchKey();
+            const root = 'admin_gallery/resources';
+
+            if (convention === 'manual') {
+                const manualPath = normalizeFolderValue(uploadFolderInput?.value);
+                // In manual mode, respect exactly what the user types.
+                return manualPath;
+            }
+
+            if (convention === 'project-month') {
+                return `${root}/project_${label}/${getMonthKey()}`;
+            }
+
+            if (convention === 'batch-day') {
+                return `${root}/batch_${label}/${getDayKey()}`;
+            }
+
+            return `${root}/client_${label}/${getMonthKey()}`;
+        };
+
+        const refreshUploadFolderUI = () => {
+            const convention = folderConventionSelect?.value || 'client-month';
+            const autoFolder = buildUploadFolderByConvention();
+
+            if (uploadFolderInput) {
+                // Avoid hijacking typing in manual mode.
+                if (convention !== 'manual') {
+                    uploadFolderInput.value = autoFolder;
+                }
+            }
+
+            state.uploadFolder = autoFolder;
+
+            if (folderHint) {
+                folderHint.textContent = autoFolder ? `Upload path: ${autoFolder}` : 'Upload path: not set';
+            }
+        };
+
+        const getFolderFromFile = (file) => {
+            const raw = String(file?.public_id || '').trim();
+            if (!raw.includes('/')) {
+                return 'root';
+            }
+            const folder = raw.substring(0, raw.lastIndexOf('/')).trim();
+            return folder || 'root';
+        };
+
+        const isImageFile = (format) => {
+            const imageFormats = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'avif', 'tiff']);
+            return imageFormats.has(String(format || '').toLowerCase());
+        };
+
+        const isPdfFile = (format) => String(format || '').toLowerCase() === 'pdf';
+
+        const findFileById = (idValue) => state.allFiles.find((item) => String(item.id) === String(idValue));
+
+        const openFolderModal = (folderName, focusedId = null) => {
+            if (!previewModal || !previewBody || !previewTitle || !previewOpenLink) {
+                return;
+            }
+
+            const filesInFolder = state.allFiles.filter((file) => getFolderFromFile(file) === folderName);
+            previewTitle.textContent = `Folder: ${folderName} (${filesInFolder.length})`;
+            previewOpenLink.style.display = 'none';
+
+            if (!filesInFolder.length) {
+                previewBody.innerHTML = '<div class="gallery-preview-file-fallback">No files found in this folder.</div>';
+                previewModal.style.display = 'flex';
+                return;
+            }
+
+            previewBody.innerHTML = `
+                <div class="gallery-folder-grid">
+                    ${filesInFolder.map((file) => {
+                        const fileUrl = escapeHtml(file.image_url || '');
+                        const fileTitle = escapeHtml(file.filename || 'Untitled');
+                        const formatRaw = String(file.format || '');
+                        const ext = formatRaw.toUpperCase();
+                        const openHref = formatRaw.toLowerCase() === 'pdf'
+                            ? `${openEndpointBase}/${file.id}`
+                            : (file.image_url || '#');
+                        const activeClass = String(file.id) === String(focusedId) ? 'active' : '';
+                        const thumb = isImageFile(file.format)
+                            ? `<img class="gallery-folder-thumb" src="${fileUrl}" alt="${fileTitle}" loading="lazy">`
+                            : `<div class="gallery-folder-file">${escapeHtml(ext)} FILE</div>`;
+
+                        return `
+                            <article class="gallery-folder-item ${activeClass}">
+                                ${thumb}
+                                <div class="gallery-folder-meta">
+                                    <div class="gallery-folder-name" title="${fileTitle}">${fileTitle}</div>
+                                    <div class="gallery-meta">
+                                        <span class="gallery-pill">${escapeHtml(ext)}</span>
+                                    </div>
+                                </div>
+                                <div class="gallery-folder-open">
+                                    <a href="${escapeHtml(openHref)}" target="_blank" rel="noopener noreferrer">Open File</a>
+                                </div>
+                            </article>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+
+            previewModal.style.display = 'flex';
+        };
+
+        const closePreviewModal = () => {
+            if (!previewModal || !previewBody) {
+                return;
+            }
+            previewModal.style.display = 'none';
+            previewBody.innerHTML = '';
+            if (previewOpenLink) {
+                previewOpenLink.style.display = '';
+            }
+        };
 
         // --- EXPOSED GLOBAL FUNCTIONS (For HTML onclick events) ---
         window.deleteImage = (id) => {
@@ -417,38 +874,45 @@
             }
         }
 
-        // Card UI Builder
-        const buildCard = (file) => {
-            const safeTitle = escapeHtml(file.filename || 'Untitled');
-            const safeCategory = escapeHtml(file.customer_name || 'General'); 
-            const safeExt = escapeHtml(file.format || 'IMG');
-            const safePreview = escapeHtml(file.image_url || '');
+        // Main grid now renders by folder, not by individual file.
+        const buildFolderCard = (folderName, files) => {
+            const sortedFiles = [...files].sort((a, b) => {
+                const aTime = new Date(a.created_at || 0).getTime();
+                const bTime = new Date(b.created_at || 0).getTime();
+                return bTime - aTime;
+            });
+
+            const coverFile = sortedFiles.find((f) => isImageFile(f.format)) || sortedFiles[0] || null;
+            const coverUrl = escapeHtml(coverFile?.image_url || '');
+            const safeFolder = escapeHtml(folderName || 'root');
+            const imageCount = sortedFiles.length;
+            const distinctTypes = Array.from(new Set(sortedFiles.map((f) => String(f.format || '').toUpperCase()))).slice(0, 2);
+            const typeLabel = distinctTypes.join(', ') || 'FILE';
+
+            const previewHtml = (coverFile && isImageFile(coverFile.format))
+                ? `<img class="gallery-thumb" src="${coverUrl}" alt="${safeFolder}" loading="lazy">`
+                : `<div class="gallery-thumb-file">${escapeHtml(typeLabel)} FILE</div>`;
 
             return `
                 <article class="gallery-card">
-                    <img class="gallery-thumb" src="${safePreview}" alt="${safeTitle}" 
-                        onerror="this.src='https://placehold.co/400x300?text=Check+URL'" 
-                        loading="lazy">
+                    ${previewHtml}
                     <div class="gallery-card-body">
-                        <h4>${safeTitle}</h4>
+                        <h4 title="${safeFolder}">${safeFolder}</h4>
                         <div class="gallery-meta">
-                            <span class="gallery-pill">${safeCategory}</span>
-                            <span class="gallery-pill">${safeExt.toUpperCase()}</span>
+                            <span class="gallery-pill">📁 Folder</span>
+                            <span class="gallery-pill">${imageCount} file${imageCount === 1 ? '' : 's'}</span>
+                            <span class="gallery-pill">${escapeHtml(typeLabel)}</span>
                         </div>
                     </div>
                     <div class="gallery-card-footer" style="display: flex; gap: 8px;">
-                        <a class="gallery-view-btn" href="${safePreview}" target="_blank" style="flex: 1;">View</a>
-                        <button type="button" class="gallery-view-btn" onclick="deleteImage(${file.id})" 
-                                style="width: 40px; background: #dc3545; border-color: #dc3545; flex: 0 0 auto;">
-                            🗑
-                        </button>
+                        <button type="button" class="gallery-view-btn gallery-open-folder-btn" data-folder="${safeFolder}" style="flex: 1;">Open Folder</button>
                     </div>
                 </article>
             `;
         };
 
-        const renderPagination = () => {
-            const totalPages = Math.max(1, Math.ceil(state.filtered.length / state.perPage));
+        const renderPagination = (totalItems) => {
+            const totalPages = Math.max(1, Math.ceil(totalItems / state.perPage));
             if (state.page > totalPages) state.page = totalPages;
 
             const pages = [];
@@ -484,10 +948,29 @@
                 pagination.innerHTML = '';
                 return;
             }
+
+            const grouped = state.filtered.reduce((acc, file) => {
+                const folder = getFolderFromFile(file);
+                if (!acc[folder]) {
+                    acc[folder] = [];
+                }
+                acc[folder].push(file);
+                return acc;
+            }, {});
+
+            const folderRows = Object.entries(grouped)
+                .map(([folderName, files]) => ({ folderName, files }))
+                .sort((a, b) => {
+                    const aLatest = Math.max(...a.files.map((f) => new Date(f.created_at || 0).getTime()));
+                    const bLatest = Math.max(...b.files.map((f) => new Date(f.created_at || 0).getTime()));
+                    return bLatest - aLatest;
+                });
+
             const start = (state.page - 1) * state.perPage;
-            const pageItems = state.filtered.slice(start, start + state.perPage);
-            grid.innerHTML = pageItems.map(buildCard).join('');
-            renderPagination();
+            const pageFolders = folderRows.slice(start, start + state.perPage);
+
+            grid.innerHTML = pageFolders.map((folder) => buildFolderCard(folder.folderName, folder.files)).join('');
+            renderPagination(folderRows.length);
         };
 
         const applyFilters = () => {
@@ -497,10 +980,10 @@
 
             state.filtered = state.allFiles.filter((file) => {
                 const title = (file.filename || '').toLowerCase();
-                const fileCategory = (file.customer_name || 'general').toLowerCase();
+                const fileFolder = getFolderFromFile(file).toLowerCase();
                 const fileType = (file.format || '').toLowerCase();
-                return (!query || title.includes(query) || fileCategory.includes(query)) &&
-                       (category === 'all' || fileCategory === category) &&
+                return (!query || title.includes(query) || fileFolder.includes(query)) &&
+                       (category === 'all' || fileFolder === category) &&
                        (type === 'all' || fileType === type);
             });
             state.page = 1;
@@ -508,10 +991,10 @@
         };
 
         const fillFilterOptions = () => {
-            const categories = Array.from(new Set(state.allFiles.map(f => f.customer_name).filter(Boolean))).sort();
+            const categories = Array.from(new Set(state.allFiles.map(f => getFolderFromFile(f)).filter(Boolean))).sort();
             const types = Array.from(new Set(state.allFiles.map(f => f.format).filter(Boolean))).sort();
 
-            categoryFilter.innerHTML = '<option value="all">All Categories</option>' + 
+            categoryFilter.innerHTML = '<option value="all">All Folders</option>' + 
                 categories.map(cat => `<option value="${escapeHtml(cat.toLowerCase())}">${escapeHtml(cat)}</option>`).join('');
 
             typeFilter.innerHTML = '<option value="all">All Files</option>' + 
@@ -527,7 +1010,7 @@
                 const summary = payload.summary || {};
                 metricTotal.textContent = String(summary.totalImages || 0);
                 metricStorage.textContent = formatStorageMB(Number(summary.storageBytes || 0));
-                metricCategories.textContent = String(summary.categories || 0);
+                metricCategories.textContent = String(new Set(state.allFiles.map(f => getFolderFromFile(f))).size || 0);
                 metricMonth.textContent = String(summary.thisMonth || 0);
 
                 fillFilterOptions();
@@ -539,11 +1022,31 @@
 
         // --- Cloudinary ---
         let uploadQueue = [];
-        const myWidget = cloudinary.createUploadWidget({
-            cloudName: 'dik33xzef', 
-            uploadPreset: 'ml_default',
-            folder: 'admin_gallery'
-        }, (error, result) => { 
+        const openUploadWidget = () => {
+            // Start a new auto-generated folder group for each upload launch.
+            state.autoBatchKey = '';
+
+            refreshUploadFolderUI();
+
+            const desiredFolder = normalizeFolderValue(uploadFolderInput?.value) || state.uploadFolder;
+            state.uploadFolder = desiredFolder || '';
+
+            if (!state.uploadFolder) {
+                alert('Please enter a Target Folder before uploading.');
+                uploadFolderInput?.focus();
+                return;
+            }
+
+            if (uploadFolderInput) {
+                uploadFolderInput.value = state.uploadFolder;
+            }
+
+            const widget = cloudinary.createUploadWidget({
+                cloudName: 'dik33xzef', 
+                uploadPreset: 'ml_default',
+                folder: state.uploadFolder,
+                resourceType: 'auto'
+            }, (error, result) => { 
             if (!error && result && result.event === "success") { 
                 uploadQueue.push({
                     filename: result.info.original_filename,
@@ -567,13 +1070,25 @@
                 .then((data) => {
                     if (data.token) currentCsrfHash = data.token;
                     uploadQueue = [];
+                    state.autoBatchKey = '';
+                    refreshUploadFolderUI();
                     loadGalleryFiles(); 
                 })
                 .catch(err => console.error('Save failed:', err));
             }
-        });
+            });
 
-        document.getElementById("upload_widget_btn").addEventListener("click", () => myWidget.open());
+            widget.open();
+        };
+
+        document.getElementById("upload_widget_btn").addEventListener("click", openUploadWidget);
+        folderConventionSelect?.addEventListener('change', refreshUploadFolderUI);
+        uploadFolderInput?.addEventListener('input', () => {
+            if (folderConventionSelect && folderConventionSelect.value !== 'manual') {
+                folderConventionSelect.value = 'manual';
+            }
+            refreshUploadFolderUI();
+        });
 
         // Listeners
         searchInput?.addEventListener('input', applyFilters);
@@ -592,6 +1107,39 @@
             gridBtn.classList.remove('active');
         });
 
+        grid?.addEventListener('click', (event) => {
+            const target = event.target;
+            if (!(target instanceof Element)) {
+                return;
+            }
+
+            const openBtn = target.closest('.gallery-open-folder-btn');
+            if (!openBtn) {
+                return;
+            }
+
+            const folderName = openBtn.getAttribute('data-folder');
+            if (!folderName) {
+                return;
+            }
+
+            const firstFile = state.allFiles.find((file) => getFolderFromFile(file) === folderName);
+            openFolderModal(folderName, firstFile?.id || null);
+        });
+
+        previewCloseBtn?.addEventListener('click', closePreviewModal);
+        previewModal?.addEventListener('click', (event) => {
+            if (event.target === previewModal) {
+                closePreviewModal();
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && previewModal?.style.display === 'flex') {
+                closePreviewModal();
+            }
+        });
+
         pagination?.addEventListener('click', (event) => {
             const target = event.target;
             const pageValue = target.getAttribute('data-page');
@@ -608,6 +1156,7 @@
             }
         });
 
+        refreshUploadFolderUI();
         loadGalleryFiles();
     });
 </script>
