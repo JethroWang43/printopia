@@ -71,16 +71,21 @@ class Gallery extends BaseController
         ]);
     }
 
-    public function delete($id = null)
+public function delete($id = null)
     {
+        // Always ensure a token is returned even on early errors
         if (!$id) {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'No ID provided']);
+            return $this->response->setJSON([
+                'status' => 'error', 
+                'message' => 'No ID provided',
+                'token'  => csrf_hash()
+            ]);
         }
 
         $db = \Config\Database::connect();
         $builder = $db->table('gallery_designs');
         
-        // 1. Get file details
+        // 1. Get file details first
         $file = $builder->where('id', $id)->get()->getRow();
 
         if ($file && !empty($file->public_id)) {
@@ -89,23 +94,22 @@ class Gallery extends BaseController
             $apiSecret = 'hkjnNoLn0PwITfBszyy6nTGQoYs'; 
             $timestamp = time();
             
-            // 2. Correct Signature Generation
-            // Parameters MUST be in alphabetical order for the signature
-            $params_to_sign = [
+            // 2. Optimized Signature Generation
+            // Cloudinary expects: parameter1=value1&parameter2=value2SECRET
+            $params = [
                 'public_id' => $file->public_id,
                 'timestamp' => $timestamp,
             ];
-            ksort($params_to_sign); // Sort alphabetically
+            ksort($params);
 
-            $string_to_sign = "";
-            foreach ($params_to_sign as $key => $value) {
-                $string_to_sign .= "$key=$value&";
+            $sign_string = "";
+            foreach ($params as $key => $value) {
+                $sign_string .= "$key=$value&";
             }
-            // Remove trailing '&' and append the API Secret
-            $string_to_sign = rtrim($string_to_sign, "&") . $apiSecret;
-            $signature = sha1($string_to_sign);
+            $sign_string = rtrim($sign_string, "&") . $apiSecret;
+            $signature = sha1($sign_string);
 
-            // 3. Cloudinary API Call
+            // 3. API Call
             $url = "https://api.cloudinary.com/v1_1/{$cloudName}/image/destroy";
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_POST, 1);
@@ -116,18 +120,18 @@ class Gallery extends BaseController
                 'signature' => $signature
             ]);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            $response = curl_exec($ch);
+            $response = json_decode(curl_exec($ch), true); // Decode to check result
             curl_close($ch);
             
-            // Optional: Log response for debugging
-            // log_message('debug', 'Cloudinary Delete Response: ' . $response);
+            // Log for your own debugging if needed
+            // log_message('debug', 'Cloudinary result: ' . json_encode($response));
         }
 
-        // 4. Delete from local database
+        // 4. Delete from local database (printopia_database)
         if ($builder->where('id', $id)->delete()) {
             return $this->response->setJSON([
                 'status' => 'success',
-                'token'  => csrf_hash() // <--- NEW FRESH TOKEN
+                'token'  => csrf_hash() 
             ]);
         }
 
