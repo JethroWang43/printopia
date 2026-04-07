@@ -1,0 +1,90 @@
+/* Color Variables */
+:root {
+    --brand-dark: #1a2a47;
+    --brand-red: #8b1a1a;
+    --brand-beige: #e9e5e2;
+    --brand-green: #28a745;
+}
+
+/* Layout */
+.branding-section {
+    background-color: var(--brand-beige);
+}
+
+.form-wrapper {
+    max-width: 600px;
+}
+
+/* Typography */
+.brand-title {
+    color: var(--brand-dark);
+    font-weight: 700;
+}
+
+.brand-subtitle {
+    color: var(--brand-dark);
+    font-weight: 700;
+}
+
+.form-header h2 {
+    color: var(--brand-dark);
+}
+
+.custom-label {
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+/* Feature List */
+.feature-list li {
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    color: var(--brand-dark);
+    display: flex;
+    align-items: center;
+}
+
+.check-icon {
+    color: var(--brand-green);
+    margin-right: 12px;
+    font-weight: bold;
+}
+
+/* Form Inputs */
+.input-group-text {
+    background-color: #fff;
+    border-right: none;
+    color: #6c757d;
+}
+
+.form-control {
+    border-left: none;
+}
+
+.form-control:focus {
+    box-shadow: none;
+    border-color: #ced4da;
+}
+
+.form-control::placeholder {
+    color: #adb5bd;
+    font-size: 0.9rem;
+}
+
+/* Button */
+.btn-signup-submit {
+    background-color: var(--brand-red);
+    color: #ffffff;
+    border-radius: 8px;
+    transition: opacity 0.2s;
+}
+
+.btn-signup-submit:hover {
+    color: #ffffff;
+    opacity: 0.9;
+}
+
+/* Fix for password eye icon border */
+.password-group .form-control {
+    border-right: none;
+}

@@ -26,6 +26,13 @@
             box-sizing: border-box;
         }
 
+
+    <link rel="stylesheet" href="<?= base_url('/css/auth.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('/css/login.css') ?>">
+
+    <script src="<?= base_url('/js/login.js') ?>"></script>
+
+    <title><?= esc($title); ?></title>
         html {
             font-size: 16px;
         }

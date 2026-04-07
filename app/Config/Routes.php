@@ -8,6 +8,7 @@ use CodeIgniter\Router\RouteCollection;
 
 // Routes for Index controller
 $routes->get('/', 'Index::index');
+$routes->get('dashboard', 'Index::index');
 $routes->get('products', 'Products::index');
 $routes->get('how-it-works', 'Howitwork::index');
 $routes->get('contact', 'Contact::index');
@@ -69,6 +70,15 @@ $routes->get('users/view/(:num)', 'Users::view/$1');
 $routes->get('users/edit/(:num)', 'Users::edit/$1');
 $routes->post('users/update/(:num)', 'Users::update/$1');
 $routes->get('users/delete/(:num)', 'Users::delete/$1');
+
+
+// SIGNUP, LOGIN, LOGOUT
+$routes->get('/signup', 'Auth::showSignupForm');
+$routes->post('/auth/signup', 'Auth::signup');
+
+$routes->get('/login', 'Auth::showLoginForm');
+$routes->post('/auth/login', 'Auth::login');
+$routes->get('/logout', 'Auth::logout');
 
 
 // FOR TEST
