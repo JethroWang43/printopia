@@ -283,4 +283,4 @@
     </section>
 </article>
 
-<?php include APPPATH . 'Models/admin_function/notification_function.php'; ?>
+<?php include APPPATH . 'Controllers/admin_function/notification_function.php'; ?>

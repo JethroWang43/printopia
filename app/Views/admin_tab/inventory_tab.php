@@ -422,4 +422,4 @@
 	</div>
 </article>
 
-<?php include APPPATH . 'Models/admin_function/inventory_function.php'; ?>
+<?php include APPPATH . 'Controllers/admin_function/inventory_function.php'; ?>

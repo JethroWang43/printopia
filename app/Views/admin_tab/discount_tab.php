@@ -576,4 +576,4 @@
 	</section>
 </article>
 
-<?php include APPPATH . 'Models/admin_function/discount_function.php'; ?>
+<?php include APPPATH . 'Controllers/admin_function/discount_function.php'; ?>

@@ -344,4 +344,4 @@
     </section>
 </article>
 
-<?php include APPPATH . 'Models/admin_function/control_function.php'; ?>
+<?php include APPPATH . 'Controllers/admin_function/control_function.php'; ?>

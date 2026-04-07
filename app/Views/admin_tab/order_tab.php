@@ -552,4 +552,4 @@
     </section>
 </article>
 
-<?php include APPPATH . 'Models/admin_function/order_function.php'; ?>
+<?php include APPPATH . 'Controllers/admin_function/order_function.php'; ?>

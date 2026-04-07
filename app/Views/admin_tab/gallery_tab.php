@@ -598,4 +598,4 @@
     </div>
 </div>
 
-<?php include APPPATH . 'Models/admin_function/gallery_function.php'; ?>
+<?php include APPPATH . 'Controllers/admin_function/gallery_function.php'; ?>
