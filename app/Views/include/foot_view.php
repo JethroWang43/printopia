@@ -60,3 +60,5 @@
         <div class="footer-bottom">&copy; 2026 Printopia. All rights reserved.</div>
     </div>
 </footer>
+</body>
+</html>

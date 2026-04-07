@@ -30,12 +30,24 @@
     .topbar .user-dropdown .user-role:hover {
         background: #f5f7fb;
     }
+    /* logo image sizing */
+    .logo-img {
+        height: 30px;       /* smaller height */
+        width: auto;        /* maintain aspect ratio */
+    }
+
+    /* optional: adjust text size next to logo */
+    .logo-text {
+        font-size: 1.1rem;  /* adjust as needed */
+    }`
+
 </style>
 
 <header class="topbar">
-    <div class="container topbar-inner">
+    <div class="container topbar-inner d-flex align-items-center justify-content-between">
+        
         <a class="logo" href="<?= base_url(); ?>">
-            <span class="logo-mark">P</span>
+            <img src="<?= base_url('/assets/Logo.png'); ?>" alt="Printopia Logo" class="logo-img me-2">
             <span>Printopia</span>
         </a>
 
@@ -46,17 +58,15 @@
             <a href="<?= base_url('contact'); ?>" class="<?= (($activePage ?? '') === 'contact') ? 'active' : ''; ?>">Contact Us</a>
         </nav>
 
-        <div class="user-menu" aria-label="Role menu">
-            <button type="button" class="user-chip-btn" aria-haspopup="true" aria-expanded="false">
-                <span>◎</span>
-                <span><?= esc($userLabel ?? 'Sample User'); ?></span>
-                <span>▾</span>
-            </button>
-            <div class="user-dropdown" role="menu" aria-label="Select role">
-                <a class="user-role" role="menuitem" href="<?= base_url(); ?>">User</a>
-                <a class="user-role" role="menuitem" href="<?= base_url('admin'); ?>">Admin</a>
-                <a class="user-role" role="menuitem" href="<?= base_url('employee'); ?>">Employee</a>
-            </div>
+        <!-- NEW AUTH BUTTONS -->
+        <div class="auth-actions d-flex align-items-center gap-2">
+            <a href="<?= base_url('login'); ?>" class="btn btn-outline-primary btn-sm">
+                Login
+            </a>
+            <a href="<?= base_url('signup'); ?>" class="btn btn-primary btn-sm fw-bold">
+                Sign Up
+            </a>
         </div>
+
     </div>
 </header>
