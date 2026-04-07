@@ -12,10 +12,16 @@ class Auth extends Controller
 
     public function __construct()
     {
-        $factory = (new Factory)
-            ->withServiceAccount(APPPATH . 'config/firebase-service-account.json')
-            ->withDatabaseUri('https://printopia-39edf-default-rtdb.asia-southeast1.firebasedatabase.app/');
+        // 🔹 Load Firebase configuration from .env
+        $serviceAccountPath = getenv('FIREBASE_SERVICE_ACCOUNT_PATH'); // local path to JSON
+        $databaseUrl = getenv('FIREBASE_DB_URL');                     // Firebase Realtime DB URL
 
+        // 🔹 Initialize Firebase Factory
+        $factory = (new Factory)
+            ->withServiceAccount($serviceAccountPath)
+            ->withDatabaseUri($databaseUrl);
+
+        // 🔹 Create Auth and Database instances
         $this->auth = $factory->createAuth();
         $this->database = $factory->createDatabase();
     }
@@ -134,7 +140,7 @@ class Auth extends Controller
 
             try {
                 $client = \Config\Services::curlrequest();
-                $apiKey = "AIzaSyBiqvBZjwP8l0JMTie7cRd0I3odj86Bujg"; // your Firebase Web API key
+                $apiKey = getenv('FIREBASE_API_KEY'); // your Firebase Web API key
 
                 $response = $client->post(
                     "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={$apiKey}",
