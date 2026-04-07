@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+  <rect width="1200" height="900" fill="#f7f8fb"/>
+  <rect x="70" y="70" width="1060" height="760" rx="28" fill="#ffffff" stroke="#e1e8f3" stroke-width="2"/>
+  <text x="130" y="220" font-family="Arial, sans-serif" font-size="72" font-weight="700" fill="#10224f">Brand Campaign</text>
+  <text x="130" y="286" font-family="Arial, sans-serif" font-size="34" fill="#5a6072">Social + Print unified artwork</text>
+  <rect x="130" y="350" width="280" height="280" rx="16" fill="#e7a821"/>
+  <rect x="430" y="350" width="280" height="280" rx="16" fill="#1e91d6"/>
+  <rect x="730" y="350" width="280" height="280" rx="16" fill="#10224f"/>
+</svg>

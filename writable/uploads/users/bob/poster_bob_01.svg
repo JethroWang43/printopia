@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+  <rect width="1200" height="900" fill="#10224f"/>
+  <rect x="90" y="90" width="1020" height="720" rx="24" fill="#e7a821"/>
+  <text x="150" y="250" font-family="Arial, sans-serif" font-size="82" font-weight="800" fill="#10224f">Grand Opening</text>
+  <text x="150" y="330" font-family="Arial, sans-serif" font-size="40" fill="#10224f">Print Service Branch - Tanauan</text>
+  <line x1="150" y1="370" x2="950" y2="370" stroke="#10224f" stroke-width="6"/>
+  <text x="150" y="460" font-family="Arial, sans-serif" font-size="34" fill="#10224f">Date: April 20, 2026</text>
+</svg>

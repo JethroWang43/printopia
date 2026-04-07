@@ -85,6 +85,11 @@
                             <i class="bi bi-calendar me-2"></i> Calendar
                         </button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="calendar-overview-tab" data-bs-toggle="tab" data-bs-target="#calendar-overview-view" type="button" role="tab">
+                            <i class="bi bi-list-task me-2"></i> Overview
+                        </button>
+                    </li>
                 </ul>
             </div>
 
@@ -144,6 +149,13 @@
 
             <!-- Content Area -->
             <div class="content-area flex-grow-1 p-3 overflow-auto">
+                <div id="viewLoadingOverlay" class="view-loading-overlay" aria-live="polite" aria-busy="true" style="display: none;">
+                    <div class="view-loading-card">
+                        <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+                        <div class="mt-3 fw-semibold">Loading view...</div>
+                        <div class="text-muted small" id="viewLoadingText">Preparing task data</div>
+                    </div>
+                </div>
                 <div class="tab-content" id="viewContent">
                     <!-- Table View -->
                     <div class="tab-pane fade show active" id="table-view" role="tabpanel">
@@ -171,6 +183,27 @@
                                 </tbody>
                             </table>
                         </div>
+                        <div class="table-view-pagination" id="tableViewPagination">
+                            <span class="small text-muted" id="tablePaginationSummary">Showing 0-0 of 0 tasks</span>
+                            <div class="table-view-pagination-controls">
+                                <div class="table-view-page-size">
+                                    <label class="small text-muted mb-0" for="tablePaginationPageSize">Rows</label>
+                                    <select class="form-select form-select-sm" id="tablePaginationPageSize" aria-label="Rows per page">
+                                        <option value="5">5</option>
+                                        <option value="8" selected>8</option>
+                                        <option value="12">12</option>
+                                        <option value="20">20</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-sm btn-outline-secondary" id="tablePaginationPrev" type="button">
+                                    <i class="bi bi-chevron-left me-1"></i> Prev
+                                </button>
+                                <span class="small text-muted" id="tablePaginationPageInfo">Page 1 of 1</span>
+                                <button class="btn btn-sm btn-outline-secondary" id="tablePaginationNext" type="button">
+                                    Next <i class="bi bi-chevron-right ms-1"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Kanban View -->
@@ -195,6 +228,61 @@
                                 </button>
                             </div>
                             <div id="calendar" class="calendar-grid"></div>
+                        </div>
+                    </div>
+
+                    <!-- Calendar Overview View -->
+                    <div class="tab-pane fade" id="calendar-overview-view" role="tabpanel">
+                        <div id="calendarOverviewContainer">
+                            <div class="calendar-overview-head">
+                                <div>
+                                    <h5 class="mb-1">Task Timeline Overview</h5>
+                                    <p class="text-muted small mb-0">Quick view of tasks with due date and created date.</p>
+                                </div>
+                                <span class="badge text-bg-light" id="calendarOverviewStats">0 tasks</span>
+                            </div>
+                            <div class="calendar-overview-toolbar">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" id="calendarOverviewSearch" placeholder="Search task or status..." aria-label="Search overview tasks">
+                                </div>
+                                <div class="calendar-overview-filter-wrap">
+                                    <label class="small text-muted mb-0" for="calendarOverviewStatusFilter">Status</label>
+                                    <select class="form-select form-select-sm" id="calendarOverviewStatusFilter" aria-label="Filter by status">
+                                        <option value="all" selected>All</option>
+                                    </select>
+                                </div>
+                                <div class="calendar-overview-filter-wrap">
+                                    <label class="small text-muted mb-0" for="calendarOverviewDueFilter">Due</label>
+                                    <select class="form-select form-select-sm" id="calendarOverviewDueFilter" aria-label="Filter by due date">
+                                        <option value="all" selected>All</option>
+                                        <option value="withDue">With due date</option>
+                                        <option value="noDue">No due date</option>
+                                        <option value="overdue">Overdue</option>
+                                        <option value="next7">Next 7 days</option>
+                                    </select>
+                                </div>
+                                <div class="calendar-overview-page-size-wrap">
+                                    <label class="small text-muted mb-0" for="calendarOverviewPageSize">Rows</label>
+                                    <select class="form-select form-select-sm" id="calendarOverviewPageSize" aria-label="Overview rows per page">
+                                        <option value="6">6</option>
+                                        <option value="8" selected>8</option>
+                                        <option value="12">12</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="calendar-overview-list" id="calendarOverviewList">
+                                <div class="text-muted py-4 text-center">No task data available.</div>
+                            </div>
+                            <div class="calendar-overview-pagination" id="calendarOverviewPagination">
+                                <button class="btn btn-sm btn-outline-secondary" id="calendarOverviewPrev" type="button">
+                                    <i class="bi bi-chevron-left me-1"></i> Prev
+                                </button>
+                                <span class="small text-muted" id="calendarOverviewPageInfo">Page 1 of 1</span>
+                                <button class="btn btn-sm btn-outline-secondary" id="calendarOverviewNext" type="button">
+                                    Next <i class="bi bi-chevron-right ms-1"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -223,7 +311,7 @@
             <div class="modal-content">
                 <div class="modal-header bg-light">
                     <div>
-                        <h5 class="modal-title mb-1">Personal Notes</h5>
+                        <h5 class="modal-title mb-1">Personal Planner</h5>
                         <small class="text-muted" id="calendarNoteModalDateLabel">Select a date</small>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -234,9 +322,26 @@
                             <label class="form-label small mb-1" for="calendarNoteDate">Date</label>
                             <input type="date" class="form-control calendar-note-control" id="calendarNoteDate">
                         </div>
-                        <div class="col-md-7 d-flex flex-column calendar-note-field">
-                            <label class="form-label small mb-1" for="calendarNoteText">Note</label>
-                            <textarea class="form-control calendar-note-control calendar-note-textarea" id="calendarNoteText" rows="2" placeholder="Write a personal reminder..."></textarea>
+                        <div class="col-md-3 d-flex flex-column calendar-note-field">
+                            <label class="form-label small mb-1" for="calendarNoteType">Type</label>
+                            <select class="form-select calendar-note-control" id="calendarNoteType">
+                                <option value="note">Note</option>
+                                <option value="event">Event</option>
+                                <option value="reminder">Reminder</option>
+                                <option value="document">Document</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex flex-column calendar-note-field">
+                            <label class="form-label small mb-1" for="calendarNoteTitle">Title</label>
+                            <input type="text" class="form-control calendar-note-control" id="calendarNoteTitle" placeholder="Add a short title...">
+                        </div>
+                        <div class="col-md-2 d-flex flex-column calendar-note-field">
+                            <label class="form-label small mb-1" for="calendarEntryPriority">Priority</label>
+                            <select class="form-select calendar-note-control" id="calendarEntryPriority">
+                                <option value="normal">Normal</option>
+                                <option value="high">High</option>
+                                <option value="low">Low</option>
+                            </select>
                         </div>
                         <div class="col-md-2 d-flex align-items-end">
                             <button type="button" class="btn btn-primary w-100 calendar-note-add-btn" id="addCalendarNoteBtn">
@@ -245,12 +350,46 @@
                         </div>
                     </div>
 
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3 d-flex flex-column calendar-note-field">
+                            <label class="form-label small mb-1" for="calendarEntryStatus">Status</label>
+                            <select class="form-select" id="calendarEntryStatus">
+                                <option value="open">Open</option>
+                                <option value="done">Done</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6 d-flex flex-column calendar-note-field" id="calendarEntryTimeField">
+                            <label class="form-label small mb-1" for="calendarEntryTime">Event Time</label>
+                            <input type="time" class="form-control" id="calendarEntryTime">
+                        </div>
+                        <div class="col-md-6 d-flex flex-column calendar-note-field" id="calendarEntryReminderField">
+                            <label class="form-label small mb-1" for="calendarEntryReminder">Reminder Time</label>
+                            <input type="datetime-local" class="form-control" id="calendarEntryReminder">
+                        </div>
+                        <div class="col-md-6 d-flex flex-column calendar-note-field" id="calendarEntryDocumentNameField">
+                            <label class="form-label small mb-1" for="calendarEntryDocumentName">Document Name</label>
+                            <input type="text" class="form-control" id="calendarEntryDocumentName" placeholder="Quotation, file name, etc.">
+                        </div>
+                        <div class="col-md-6 d-flex flex-column calendar-note-field" id="calendarEntryDocumentUrlField">
+                            <label class="form-label small mb-1" for="calendarEntryDocumentUrl">Document URL</label>
+                            <input type="url" class="form-control" id="calendarEntryDocumentUrl" placeholder="https://...">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small mb-1" for="calendarNoteText">Details</label>
+                        <textarea class="form-control calendar-note-textarea" id="calendarNoteText" rows="3" placeholder="Add complete details (location, checklist, context, links, etc.)"></textarea>
+                    </div>
+
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <small class="text-muted" id="calendarNotesCount">0 notes</small>
+                        <small class="text-muted" id="calendarNotesCount">0 entries</small>
                     </div>
 
                     <div id="calendarNotesList" class="calendar-notes-list">
-                        <div class="text-muted small">No notes yet.</div>
+                        <div class="text-muted small">No entries yet.</div>
                     </div>
                 </div>
             </div>
@@ -685,7 +824,6 @@
 
     <script src="https://js.puter.com/v2/"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="lib/env.js"></script>
-    <script src="app.js"></script>
+    <script src="app.js?v=20260406"></script>
 </body>
 </html>

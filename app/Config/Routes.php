@@ -15,9 +15,14 @@ $routes->get('contact', 'Contact::index');
 $routes->get('custom-order', 'Index::customOrder');
 $routes->get('admin', 'Admin::index');
 $routes->get('employee', 'Employee::index');
+$routes->get('admin/gallery/files', 'Gallery::files');
+$routes->get('admin/gallery/open/(:num)', 'Gallery::open/$1');
+$routes->post('admin/gallery/save_to_db', 'Gallery::save_to_db');
+$routes->post('admin/gallery/delete/(:num)', 'Gallery::delete/$1');
 
 // Trello task management embedded app
 $routes->get('trello-task/index.html', 'Admin::trelloTaskIndex');
+$routes->post('trello-task/proxy', 'Admin::trelloTaskProxy');
 $routes->get('trello-task/lib/(:any)', 'Admin::trelloTaskLibAsset/$1');
 $routes->get('trello-task/(:any)', 'Admin::trelloTaskAsset/$1');
 
@@ -36,6 +41,19 @@ $routes->get('printopia/admin', 'Admin::index');
 $routes->get('Printopia/admin', 'Admin::index');
 $routes->get('printopia/employee', 'Employee::index');
 $routes->get('Printopia/employee', 'Employee::index');
+// $routes->get('printopia/admin/gallery/files', 'Admin::galleryFiles');
+// $routes->get('Printopia/admin/gallery/files', 'Admin::galleryFiles');
+// $routes->get('printopia/admin/gallery/file/(:any)', 'Admin::galleryFile/$1');
+// $routes->get('Printopia/admin/gallery/file/(:any)', 'Admin::galleryFile/$1');
+
+// Gallery Group
+$routes->group('printopia/admin/gallery', function($routes) {
+    $routes->get('files', 'Gallery::files');
+    $routes->get('open/(:num)', 'Gallery::open/$1');
+    $routes->post('save_to_db', 'Gallery::save_to_db');
+    // Change this to post
+    $routes->post('delete/(:num)', 'Gallery::delete/$1'); 
+});
 
 $routes->get('printopia/trello-task/index.html', 'Admin::trelloTaskIndex');
 $routes->get('Printopia/trello-task/index.html', 'Admin::trelloTaskIndex');
