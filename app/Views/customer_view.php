@@ -28,7 +28,7 @@
     .profile h4 { margin: 0 0 6px; color: #1f2f63; font-size: 1.08rem; }
     .profile .badge { 
         display: inline-block; font-size: 0.72rem; font-weight: 700; 
-        color: #ffffff; background: #28a745; /* Green for Customer */
+        color: #ffffff; background: #28a745; 
         padding: 3px 9px; border-radius: 999px; 
     }
 
@@ -87,6 +87,7 @@
                     <li><a href="#" class="active" data-section="customer-overview">Dashboard Overview</a></li>
                     <li><a href="#" data-section="my-orders">My Orders</a></li>
                     <li><a href="#" data-section="saved-designs">My Designs</a></li>
+                    <li><a href="#" data-section="notification-view">Notifications</a></li>
                     <li><a href="#" data-section="account-settings">Settings</a></li>
                 </ul>
             </aside>
@@ -100,6 +101,7 @@
                         <article class="stat"><h5>Saved Designs</h5><strong><?= $designCount ?></strong></article>
                         <article class="stat"><h5>Notifications</h5><strong><?= $notifCount ?></strong></article>
                     </div>
+
                     <div class="panels">
                         <article class="panel">
                             <h3>Current Orders</h3>
@@ -118,9 +120,21 @@
                     </div>
                 </div>
 
-                <div id="my-orders" class="content-section"><h2>My Order History</h2></div>
-                <div id="saved-designs" class="content-section"><h2>My Cloudinary Gallery</h2></div>
-                <div id="account-settings" class="content-section"><h2>Account Settings</h2></div>
+                <div id="my-orders" class="content-section">
+                    <?= view('customer_tab/order_history'); ?>
+                </div>
+
+                <div id="saved-designs" class="content-section">
+                    <?= view('customer_tab/saved_designs'); ?>
+                </div>
+
+                <div id="notification-view" class="content-section">
+                    <?= view('customer_tab/notifications_view'); ?>
+                </div>
+
+                <div id="account-settings" class="content-section">
+                    <article class="panel"><h2>Account Settings</h2><p>Profile management logic goes here.</p></article>
+                </div>
 
             </section>
         </div>
@@ -148,14 +162,13 @@
             const applySidebar = (isHidden) => {
                 dashboardGrid.classList.toggle('sidebar-hidden', isHidden);
                 document.querySelector('#sidebar-show-btn').style.display = isHidden ? 'inline-flex' : 'none';
-                localStorage.setItem('customer_sidebar_state', isHidden ? 'hidden' : 'visible');
+                localStorage.setItem('customerSidebarHidden', isHidden ? '1' : '0');
             };
-
-            // On Page Load:
-            if (localStorage.getItem('customer_sidebar_state') === 'hidden') applySidebar(true);
 
             document.querySelector('#sidebar-hide-btn').onclick = () => applySidebar(true);
             document.querySelector('#sidebar-show-btn').onclick = () => applySidebar(false);
+            
+            if(localStorage.getItem('customerSidebarHidden') === '1') applySidebar(true);
         });
     </script>
 </body>
