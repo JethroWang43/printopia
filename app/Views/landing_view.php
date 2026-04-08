@@ -401,6 +401,179 @@
             font-size: 1.35rem;
             box-shadow: 0 10px 16px rgba(16, 34, 79, 0.2);
         }
+        /* Improved Chat UI */
+        .floating-popup {
+            position: fixed;
+            bottom: 90px;
+            right: 30px; /* Adjusted position */
+            width: 350px;
+            height: 500px; /* Fixed height for better look */
+            background: var(--white);
+            border-radius: 20px;
+            box-shadow: var(--shadow-card);
+            border: 1px solid rgba(16, 34, 79, 0.1);
+            display: none; 
+            flex-direction: column;
+            z-index: 100;
+            overflow: hidden;
+            animation: rise-in 0.3s ease-out;
+        }
+
+        .popup-header {
+            background: var(--brand-navy);
+            color: white;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+        }
+
+        .popup-body {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #fdfdfd;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Chat Bubbles */
+        .msg {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            position: relative;
+        }
+
+        .msg.admin {
+            align-self: flex-start;
+            background: #e9edf7;
+            color: var(--brand-navy);
+            border-bottom-left-radius: 2px;
+        }
+
+        .msg.user {
+            align-self: flex-end;
+            background: var(--brand-gold);
+            color: #10224f;
+            font-weight: 600;
+            border-bottom-right-radius: 2px;
+        }
+
+        .popup-footer {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        #chat-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #e0e4ec;
+            border-radius: 25px;
+            outline: none;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        #chat-input:focus {
+            border-color: var(--brand-gold);
+        }
+
+        #send-btn {
+            background: var(--brand-navy);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            transition: transform 0.2s;
+        }
+
+        #send-btn:hover {
+            transform: scale(1.1);
+            background: #1a357a;
+        }
+
+        /* Improved Call UI Specifics */
+        .call-ui .popup-body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: radial-gradient(circle at center, #ffffff 0%, #f0f2f5 100%);
+        }
+
+        .avatar-circle {
+            width: 100px;
+            height: 100px;
+            background: var(--brand-navy);
+            color: var(--brand-gold);
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            box-shadow: 0 0 0 0 rgba(16, 34, 79, 0.2);
+            animation: pulse-border 2s infinite;
+        }
+
+        #call-label {
+            margin: 0;
+            font-size: 1.2rem;
+            color: var(--brand-navy);
+        }
+
+        #call-timer {
+            margin: 8px 0 0;
+            font-family: monospace;
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+
+        .call-actions {
+            justify-content: center;
+            padding: 25px;
+            gap: 30px;
+        }
+
+        .call-btn {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .call-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .btn-success { background-color: #28a745; color: white; }
+        .btn-danger { background-color: var(--danger); color: white; }
+
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(16, 34, 79, 0.4); }
+            70% { box-shadow: 0 0 0 20px rgba(16, 34, 79, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 34, 79, 0); }
+        }
 
         .site-footer {
             margin-top: 48px;
@@ -652,14 +825,148 @@
     </main>
 
     <aside class="floating-actions" aria-label="Quick actions">
-        <a href="tel:+639224756841" aria-label="Call">☎</a>
+        <a href="javascript:void(0)" onclick="togglePopup('call-popup')" aria-label="Call">☎</a>
         <a href="<?= base_url('contact'); ?>" aria-label="Support">◔</a>
-        <a href="<?= base_url('contact'); ?>" aria-label="Chat">💬</a>
+        <a href="javascript:void(0)" onclick="togglePopup('chat-popup')" aria-label="Chat">💬</a>
     </aside>
 
     <?= view('include/foot_view'); ?>
     <script src="<?= base_url('hci-assist.js'); ?>"></script>
+
+    <div id="chat-popup" class="floating-popup">
+        <div class="popup-header">
+            <span>Chat Support</span>
+            <button onclick="togglePopup('chat-popup')" style="background:none; border:none; color:white; cursor:pointer; font-size:1.5rem;">&times;</button>
+        </div>
+        <div id="chat-messages" class="popup-body">
+            <div class="msg admin">Hello! How can we help you with your print order today?</div>
+        </div>
+        <div class="popup-footer">
+            <input type="text" id="chat-input" placeholder="Type your message...">
+            <button id="send-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+        </div>
+    </div>
+
+    <div id="call-popup" class="floating-popup call-ui">
+        <div class="popup-header">
+            <span>Voice Call</span>
+            <button onclick="togglePopup('call-popup')" style="background:none; border:none; color:white; cursor:pointer; font-size:1.5rem;">&times;</button>
+        </div>
+        
+        <div class="popup-body">
+            <div class="avatar-circle">A</div>
+            <h4 id="call-label">Ready to call</h4>
+            <p id="call-timer">00:00</p>
+        </div>
+        
+        <div class="popup-footer call-actions">
+            <button id="start-call-btn" class="call-btn btn-success" title="Start Call">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+            </button>
+            
+            <button id="end-call-btn" class="call-btn btn-danger" title="End Call">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"></path><line x1="23" y1="1" x2="1" y2="23"></line></svg>
+            </button>
+        </div>
+        <audio id="remote-audio" autoplay></audio>
+    </div>
 </body>
+
+<script>
+    // Your JavaScript code here
+    let localStream;
+    let peerConnection;
+    const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+    function togglePopup(id) {
+        const popup = document.getElementById(id);
+        popup.style.display = (popup.style.display === 'flex') ? 'none' : 'flex';
+    }
+
+    // WEBRTC AUDIO LOGIC (Calling)
+    document.getElementById('start-call-btn').onclick = async () => {
+        try {
+            document.getElementById('call-label').innerText = "Connecting...";
+            
+            // 1. Get Audio
+            localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            
+            // 2. Setup WebRTC Peer
+            peerConnection = new RTCPeerConnection(config);
+            
+            // Add our audio to the connection
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+            // Listen for remote audio from Admin
+            peerConnection.ontrack = (event) => {
+                document.getElementById('remote-audio').srcObject = event.streams[0];
+                document.getElementById('call-label').innerText = "On Call";
+            };
+
+            /* NOTE: Here is where Zai (Backend) needs to send the "Signal" 
+            to the Admin via WebSockets so they can answer.
+            */
+            console.log("WebRTC Offer created. Ready for signaling.");
+
+        } catch (err) {
+            alert("Could not access microphone: " + err);
+        }
+    };
+
+    document.getElementById('end-call-btn').onclick = () => {
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+        }
+        if (peerConnection) {
+            peerConnection.close();
+        }
+        document.getElementById('call-label').innerText = "Call Ended";
+        setTimeout(() => togglePopup('call-popup'), 1000);
+    };
+
+    // CHAT LOGIC (Simple UI behavior)
+    // Improved Send Logic
+    document.getElementById('send-btn').onclick = () => {
+        const input = document.getElementById('chat-input');
+        const chatMessages = document.getElementById('chat-messages');
+        
+        if (input.value.trim() !== "") {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = "msg user"; 
+            msgDiv.innerText = input.value;
+            chatMessages.appendChild(msgDiv);
+            
+            input.value = "";
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Mock Admin Response for testing
+            setTimeout(() => {
+                const adminDiv = document.createElement('div');
+                adminDiv.className = "msg admin";
+                adminDiv.innerText = "Thanks for the message! Our team will get back to you shortly.";
+                chatMessages.appendChild(adminDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 1000);
+        }
+    };
+
+    // Allow Enter key to send
+    document.getElementById('chat-input').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            document.getElementById('send-btn').click();
+        }
+    });
+
+    let seconds = 0;
+    const timerInterval = setInterval(() => {
+        seconds++;
+        const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const secs = (seconds % 60).toString().padStart(2, '0');
+        document.getElementById('call-timer').innerText = `${mins}:${secs}`;
+    }, 1000);
+
+    // Remember to clearInterval(timerInterval) in the end-call logic!
+</script>
 </html>
-
-
