@@ -71,6 +71,11 @@ $routes->get('users/edit/(:num)', 'Users::edit/$1');
 $routes->post('users/update/(:num)', 'Users::update/$1');
 $routes->get('users/delete/(:num)', 'Users::delete/$1');
 
+// Routes for Customer controller
+$routes->group('customer', function($routes) {
+    $routes->get('/', 'Customer::index'); // This makes /customer work
+    $routes->get('dashboard', 'Customer::index'); // This makes /customer/dashboard work
+});
 
 // SIGNUP, LOGIN, LOGOUT
 $routes->get('/signup', 'Auth::showSignupForm');
