@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Kreait\Firebase\JWT\Action\VerifySessionCookie;
 
-use Beste\Clock\FrozenClock;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeInterface;
@@ -17,6 +16,7 @@ use Kreait\Firebase\JWT\SecureToken;
 use Kreait\Firebase\JWT\Signer\None;
 use Kreait\Firebase\JWT\Token\Parser;
 use Kreait\Firebase\JWT\Util;
+use Lcobucci\Clock\FrozenClock;
 use Lcobucci\JWT\Encoding\JoseEncoder;
 use Lcobucci\JWT\Signer;
 use Lcobucci\JWT\Signer\Key\InMemory;
@@ -40,13 +40,10 @@ use function is_string;
  */
 final class WithLcobucciJWT implements Handler
 {
+    private readonly ClockInterface $clock;
     private readonly Parser $parser;
-
     private Signer $signer;
-
     private readonly Validator $validator;
-
-    private readonly bool $isRunOnEmulator;
 
     /**
      * @param non-empty-string $projectId
@@ -54,13 +51,17 @@ final class WithLcobucciJWT implements Handler
     public function __construct(
         private readonly string $projectId,
         private readonly Keys $keys,
-        private readonly ClockInterface $clock,
+        ClockInterface $clock,
     ) {
+        $this->clock = $clock;
         $this->parser = new Parser(new JoseEncoder());
 
-        $this->isRunOnEmulator = Util::authEmulatorHost() !== '';
+        if (Util::authEmulatorHost() !== '') {
+            $this->signer = new None();
+        } else {
+            $this->signer = new Sha256();
+        }
 
-        $this->signer = $this->isRunOnEmulator ? new None() : new Sha256();
         $this->validator = new Validator();
     }
 
@@ -76,7 +77,7 @@ final class WithLcobucciJWT implements Handler
         }
 
         $key = $this->getKey($token);
-        $clock = FrozenClock::at($this->clock->now());
+        $clock = new FrozenClock($this->clock->now());
         $leeway = new DateInterval('PT'.$action->leewayInSeconds().'S');
         $errors = [];
         $constraints = [
@@ -135,27 +136,21 @@ final class WithLcobucciJWT implements Handler
 
     private function getKey(UnencryptedToken $token): string
     {
-        $keys = $this->keys->all();
-        if ($keys === []) {
+        if (empty($keys = $this->keys->all())) {
             throw SessionCookieVerificationFailed::withSessionCookieAndReasons($token->toString(), ["No keys are available to verify the token's signature."]);
         }
 
-        if ($this->isRunOnEmulator && ($this->signer instanceof None)) {
+        $keyId = $token->headers()->get('kid');
+
+        if ($key = $keys[$keyId] ?? null) {
+            return $key;
+        }
+
+        if ($this->signer instanceof None) {
             return '';
         }
 
-        $keyId = $token->headers()->get('kid');
-        if (!is_string($keyId) || $keyId === '') {
-            throw SessionCookieVerificationFailed::withSessionCookieAndReasons($token->toString(), ["The session cookie doesn't include a `kid` header."]);
-        }
-
-        $key = $keys[$keyId] ?? null;
-
-        if ($key === null) {
-            throw SessionCookieVerificationFailed::withSessionCookieAndReasons($token->toString(), ["The `kid` header of the given token is missing or empty.No public key matching the key ID `{$keyId}` was found to verify the signature of this session cookie."]);
-        }
-
-        return $key;
+        throw SessionCookieVerificationFailed::withSessionCookieAndReasons($token->toString(), ["No public key matching the key ID '{$keyId}' was found to verify the signature of this session cookie."]);
     }
 
     private function assertUserAuthedAt(UnencryptedToken $token, DateTimeInterface $now): void

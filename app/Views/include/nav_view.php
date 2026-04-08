@@ -136,7 +136,7 @@
     /* optional: adjust text size next to logo */
     .logo-text {
         font-size: 1.1rem;  /* adjust as needed */
-    }`
+    }
 
 
     @media (max-width: 780px) {

@@ -11,18 +11,19 @@ use function in_array;
  */
 final class Util
 {
-    /**
-     * @param non-empty-string $name
-     */
     public static function getenv(string $name): ?string
     {
         $value = $_SERVER[$name] ?? $_ENV[$name] ?? getenv($name);
 
-        if (is_string($value)) {
-            return $value;
+        if ($value === false) {
+            return null;
         }
 
-        return null;
+        if ($value === null) {
+            return null;
+        }
+
+        return (string) $value;
     }
 
     public static function authEmulatorHost(): string

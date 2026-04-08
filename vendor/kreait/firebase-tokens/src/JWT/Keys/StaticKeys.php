@@ -24,7 +24,7 @@ final class StaticKeys implements Keys
     }
 
     /**
-     * @param array<non-empty-string, non-empty-string> $values
+     * @param array<string, string> $values
      */
     public static function withValues(array $values): self
     {

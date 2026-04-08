@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+    beStrictAboutOutputDuringTests="true"
+    cacheResultFile=".build/.phpunit.result.cache"
+    convertDeprecationsToExceptions="true"
+    colors="true"
+>
+
+    <testsuites>
+        <testsuite name="Firebase JWT Tests">
+            <directory>tests/JWT</directory>
+        </testsuite>
+    </testsuites>
+
+    <coverage ignoreDeprecatedCodeUnits="true" processUncoveredFiles="true" cacheDirectory=".build/coverage-cache">
+        <include>
+            <directory suffix=".php">src</directory>
+        </include>
+    </coverage>
+</phpunit>

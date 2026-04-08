@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Kreait\Firebase\JWT\Action\VerifyIdToken;
 
-use Beste\Clock\FrozenClock;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeInterface;
@@ -12,12 +11,12 @@ use Kreait\Firebase\JWT\Action\VerifyIdToken;
 use Kreait\Firebase\JWT\Contract\Keys;
 use Kreait\Firebase\JWT\Contract\Token;
 use Kreait\Firebase\JWT\Error\IdTokenVerificationFailed;
-use Kreait\Firebase\JWT\Error\SessionCookieVerificationFailed;
 use Kreait\Firebase\JWT\InsecureToken;
 use Kreait\Firebase\JWT\SecureToken;
 use Kreait\Firebase\JWT\Signer\None;
 use Kreait\Firebase\JWT\Token\Parser;
 use Kreait\Firebase\JWT\Util;
+use Lcobucci\Clock\FrozenClock;
 use Lcobucci\JWT\Encoding\JoseEncoder;
 use Lcobucci\JWT\Signer;
 use Lcobucci\JWT\Signer\Key\InMemory;
@@ -41,13 +40,10 @@ use function is_string;
  */
 final class WithLcobucciJWT implements Handler
 {
+    private readonly ClockInterface $clock;
     private readonly Parser $parser;
-
-    private readonly Signer $signer;
-
+    private Signer $signer;
     private readonly Validator $validator;
-
-    private readonly bool $isRunOnEmulator;
 
     /**
      * @param non-empty-string $projectId
@@ -55,13 +51,17 @@ final class WithLcobucciJWT implements Handler
     public function __construct(
         private readonly string $projectId,
         private readonly Keys $keys,
-        private readonly ClockInterface $clock,
+        ClockInterface $clock,
     ) {
+        $this->clock = $clock;
         $this->parser = new Parser(new JoseEncoder());
 
-        $this->isRunOnEmulator = Util::authEmulatorHost() !== '';
+        if (Util::authEmulatorHost() !== '') {
+            $this->signer = new None();
+        } else {
+            $this->signer = new Sha256();
+        }
 
-        $this->signer = $this->isRunOnEmulator ? new None() : new Sha256();
         $this->validator = new Validator();
     }
 
@@ -73,11 +73,11 @@ final class WithLcobucciJWT implements Handler
             $token = $this->parser->parse($tokenString);
             assert($token instanceof UnencryptedToken);
         } catch (Throwable $e) {
-            throw IdTokenVerificationFailed::withTokenAndReasons($tokenString, ['The token is invalid'.$e->getMessage()]);
+            throw IdTokenVerificationFailed::withTokenAndReasons($tokenString, ['The token is invalid', $e->getMessage()]);
         }
 
         $key = $this->getKey($token);
-        $clock = FrozenClock::at($this->clock->now());
+        $clock = new FrozenClock($this->clock->now());
         $leeway = new DateInterval('PT'.$action->leewayInSeconds().'S');
         $errors = [];
 
@@ -87,7 +87,7 @@ final class WithLcobucciJWT implements Handler
             new PermittedFor($this->projectId),
         ];
 
-        if ($key !== '' && !$this->isRunOnEmulator) {
+        if ($key !== '' && Util::authEmulatorHost() === '') {
             $constraints[] = new SignedWith($this->signer, InMemory::plainText($key));
         }
 
@@ -100,10 +100,10 @@ final class WithLcobucciJWT implements Handler
                 $this->assertTenantId($token, $tenantId);
             }
         } catch (RequiredConstraintsViolated $e) {
-            $errors = array_filter(array_map(
-                static fn(ConstraintViolation $violation): string => $violation->getMessage(),
+            $errors = array_map(
+                static fn(ConstraintViolation $violation): string => '- '.$violation->getMessage(),
                 $e->violations(),
-            ));
+            );
         }
 
         if (!empty($errors)) {
@@ -128,7 +128,7 @@ final class WithLcobucciJWT implements Handler
         }
         unset($header);
 
-        if ($this->isRunOnEmulator) {
+        if (Util::authEmulatorHost() !== '') {
             return InsecureToken::withValues($tokenString, $headers, $claims);
         }
 
@@ -137,27 +137,21 @@ final class WithLcobucciJWT implements Handler
 
     private function getKey(UnencryptedToken $token): string
     {
-        $keys = $this->keys->all();
-        if ($keys === []) {
-            throw IdTokenVerificationFailed::withTokenAndReasons($token->toString(), ['No keys are available to verify the tokens signature.']);
-        }
-
-        if ($this->isRunOnEmulator && ($this->signer instanceof None)) {
-            return '';
+        if (empty($keys = $this->keys->all())) {
+            throw IdTokenVerificationFailed::withTokenAndReasons($token->toString(), ["No keys are available to verify the token's signature."]);
         }
 
         $keyId = $token->headers()->get('kid');
-        if (!is_string($keyId) || $keyId === '') {
-            throw IdTokenVerificationFailed::withTokenAndReasons($token->toString(), ['No key ID was found to verify the signature of this token.']);
+
+        if ($key = $keys[$keyId] ?? null) {
+            return $key;
         }
 
-        $key = $keys[$keyId] ?? null;
-
-        if ($key === null) {
-            throw IdTokenVerificationFailed::withTokenAndReasons($token->toString(), ["No public key matching the key ID '{$keyId}' was found to verify the signature of this token."]);
+        if ($this->signer instanceof None) {
+            return '';
         }
 
-        return $key;
+        throw IdTokenVerificationFailed::withTokenAndReasons($token->toString(), ["No public key matching the key ID '{$keyId}' was found to verify the signature of this token."]);
     }
 
     private function assertUserAuthedAt(UnencryptedToken $token, DateTimeInterface $now): void

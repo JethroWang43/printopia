@@ -1,0 +1,50 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: PHP ${{ matrix.php }} - lcobucci/jwt ${{ matrix.lcobucci-jwt }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        php:
+          - "8.1"
+          - "8.2"
+          - "8.3"
+        lcobucci-jwt:
+          - "4"
+          - "5"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer, pecl
+          coverage: xdebug
+
+      - name: Install dependencies
+        run: |
+          composer require -W "lcobucci/jwt:^${{ matrix.lcobucci-jwt }}.0"
+
+      - name: Setup Problem Matchers
+        run: |
+          echo "::add-matcher::${{ runner.tool_cache }}/php.json"
+          echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
+
+      - name: Lint code
+        run: vendor/bin/phpstan analyse --no-progress
+
+      - name: Run Tests
+        run: vendor/bin/phpunit --exclude-group=emulator --testdox
+
+      - name: Run Emulator Tests
+        run: vendor/bin/phpunit --group=emulator --testdox

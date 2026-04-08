@@ -4,35 +4,26 @@ declare(strict_types=1);
 
 namespace Kreait\Firebase\JWT;
 
-use Kreait\Firebase\JWT\Contract\Token;
 use Stringable;
 
-final class InsecureToken implements Token, Stringable
+final class InsecureToken implements Contract\Token, Stringable
 {
     /**
-     * @param non-empty-string $encodedString
-     * @param array<non-empty-string, mixed> $headers
-     * @param array<non-empty-string, mixed> $payload
+     * @param array<string, mixed> $headers
+     * @param array<string, mixed> $payload
      */
-    private function __construct(
-        private readonly string $encodedString,
-        private readonly array $headers,
-        private readonly array $payload,
-    ) {
+    private function __construct(private readonly string $encodedString, private readonly array $headers, private readonly array $payload)
+    {
     }
 
-    /**
-     * @return non-empty-string
-     */
     public function __toString(): string
     {
-        return $this->encodedString;
+        return $this->toString();
     }
 
     /**
-     * @param non-empty-string $encodedString
-     * @param array<non-empty-string, mixed> $headers
-     * @param array<non-empty-string, mixed> $payload
+     * @param array<string, mixed> $headers
+     * @param array<string, mixed> $payload
      */
     public static function withValues(string $encodedString, array $headers, array $payload): self
     {
@@ -40,7 +31,7 @@ final class InsecureToken implements Token, Stringable
     }
 
     /**
-     * @return array<non-empty-string, mixed>
+     * @return array<string, mixed>
      */
     public function headers(): array
     {
@@ -48,16 +39,13 @@ final class InsecureToken implements Token, Stringable
     }
 
     /**
-     * @return array<non-empty-string, mixed>
+     * @return array<string, mixed>
      */
     public function payload(): array
     {
         return $this->payload;
     }
 
-    /**
-     * @return non-empty-string
-     */
     public function toString(): string
     {
         return $this->encodedString;
