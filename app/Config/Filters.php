@@ -74,7 +74,7 @@ class Filters extends BaseFilters
         'before' => [
             // 'honeypot',
             // 'csrf',
-            'csrf' => ['except' => ['admin/gallery/save_to_db', 'trello-task/proxy']],
+            'csrf' => ['except' => ['admin/gallery/save_to_db', 'trello-task/proxy', 'api/*']], // Exclude CSRF for these routes
             // 'invalidchars',
         ],
         'after' => [
