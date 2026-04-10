@@ -76,6 +76,9 @@ $routes->group('customer', function($routes) {
     $routes->get('/', 'Customer::index'); // This makes /customer work
     $routes->get('dashboard', 'Customer::index'); // This makes /customer/dashboard work
 });
+$routes->get('customer/my-designs', 'Designs::index');
+$routes->post('designs/upload', 'Designs::upload');
+$routes->post('designs/delete/(:num)', 'Designs::delete/$1');
 
 // SIGNUP, LOGIN, LOGOUT
 $routes->get('/signup', 'Auth::showSignupForm');
