@@ -125,7 +125,7 @@
                 </div>
 
                 <div id="saved-designs" class="content-section">
-                    <?= view('customer_tab/saved_designs'); ?>
+                    <?= view('customer_tab/my_designs', ['designs' => $designs]); ?>
                 </div>
 
                 <div id="notification-view" class="content-section">
