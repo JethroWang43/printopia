@@ -5,7 +5,7 @@ use CodeIgniter\Model;
 
 class ordernotification_model extends Model {
     protected $table = 'order_notification_tbl';
-    protected $primaryKey = 'order_notification';
+    protected $primaryKey = 'order_notification_id';
     protected $useAutoIncrement = true;
     protected $returnType = 'array';
 

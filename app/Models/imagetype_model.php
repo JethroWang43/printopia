@@ -4,7 +4,7 @@ namespace App\Models;
 use CodeIgniter\Model;
 
 class imagetype_model extends Model {
-    protected $table = 'image_type';
+    protected $table = 'image_type_tbl';
     protected $primaryKey = 'canvas_element_id';
     protected $useAutoIncrement = true;
     protected $returnType = 'array';
