@@ -1,0 +1,68 @@
+// Toggle password visibility
+function togglePassword(fieldId = 'password-field') {
+    const passwordField = document.getElementById(fieldId);
+    const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
+    passwordField.setAttribute('type', type);
+}
+
+// -------- LOGIN --------
+const loginForm = document.getElementById('loginForm');
+if(loginForm){
+    loginForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData.entries());
+
+        fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(res => {
+            if(res.status === "success"){
+                alert("Login successful! Welcome " + res.user.first_name);
+                console.log("JWT Token:", res.token);
+                window.location.href = "/dashboard";
+                // Optionally store JWT: sessionStorage.setItem('token', res.token);
+            } else {
+                alert("Error: " + (res.message || "Login failed"));
+            }
+        })
+        .catch(err => console.error(err));
+    });
+}
+
+// -------- SIGNUP --------
+const signupForm = document.getElementById('signupForm');
+if(signupForm){
+    signupForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData.entries());
+
+        // Password confirmation check
+        if(data.password !== data.confirm_password){
+            alert("Passwords do not match!");
+            return;
+        }
+
+        fetch("/api/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(res => {
+            if(res.status === "success"){
+                alert("Registration successful! Please login.");
+                window.location.href = "/login";
+            } else {
+                alert("Error: " + (res.message || "Registration failed"));
+            }
+        })
+        .catch(err => console.error(err));
+    });
+}

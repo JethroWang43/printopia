@@ -1,32 +1,61 @@
 # CHANGELOG
 
-## [7.0.0]
+**Support the project:** This SDK is downloaded 1M+ times monthly and powers thousands of applications.
+If it saves you or your team time, please consider [sponsoring its development](https://github.com/sponsors/jeromegamez).
 
-The most notable change is that you need PHP 8.1/8.2 to use the new version. The language migration of
-the SDK introduces breaking changes concerning the strictness of parameter types almost everywhere in
-the SDK - however, this should not affect your project in most cases (unless you have used internal classes
-directly or by extension).
+**Repository move:** The project moved from the `kreait` to the `beste` GitHub Organization in January 2026.
+The namespace remains `Kreait\Firebase` and the package name remains `kreait/firebase-php`.
+Please update your remote URL if you have forked or cloned the repository.
 
-This release adds many more PHPDoc annotations to support the usage of Static Analysis Tools like PHPStan
-and Psalm and moves away from doing runtime checks. It is strongly recommended to use a Static Analysis
-Tool and ensure that input values are validated before handing them over to the SDK.
+## Unreleased
 
-### Added features
+## 8.2.0 - 2026-03-04
 
-* Added support for verifying Firebase App Check Tokens. ([#747](https://github.com/kreait/firebase-php/pull/747))
+* Added support for Unicode characters in email addresses.
 
-### Notable changes
+### App Check
 
-* The ability to disable credentials auto-discovery has been removed. If you don't want a service account to be
-  auto-discovered, provide it by using the `withServiceAccount()` method of the Factory or by setting the
-  `GOOGLE_APPLICATION_CREDENTIALS` environment variable. Depending on the environment in which the SDK is running,
-  credentials could be auto-discovered otherwise, for example on GCP or GCE.
+* Added replay-protection verification for App Check tokens via `verifyTokenWithReplayProtection()`.
+  The response now includes `alreadyConsumed` when replay protection is used.
+* Added transitional contract `Kreait\Firebase\Contract\AppCheckWithReplayProtection`.
+  This was introduced to preserve backwards compatibility by avoiding a signature change to
+  `Kreait\Firebase\Contract\AppCheck::verifyToken()` in the current major release.
+* Added dedicated exception `Kreait\Firebase\Exception\AppCheck\FailedToVerifyAppCheckReplayProtection`
+  for replay-protection verification failures. It extends
+  `Kreait\Firebase\Exception\AppCheck\FailedToVerifyAppCheckToken` for backwards compatibility.
 
-See **[UPGRADE-7.0](UPGRADE-7.0.md) for more details on the changes between 6.x and 7.0.**
+## 8.1.0 - 2026-01-23
 
-## 6.x Changelog
+* Added support for `firebase/php-jwt:^7.0.2` 
 
-https://github.com/kreait/firebase-php/blob/6.x/CHANGELOG.md
+## 8.0.0 - 2026-01-08
 
-[Unreleased]: https://github.com/kreait/firebase-php/tree/7.x
-[7.0.0]: https://github.com/kreait/firebase-php/releases/tag/7.0.0
+### Security improvements
+
+* Added `#[SensitiveParameter]` attributes to methods handling sensitive data (passwords, tokens, private keys) 
+  to prevent them from appearing in stack traces and error logs.
+
+### Breaking changes
+
+* The SDK supports only actively supported PHP versions. As a result, support for PHP < 8.3 has been dropped;
+  supported versions are 8.3, 8.4, and 8.5.
+* [Firebase Dynamic Links was shut down on August 25th, 2025](https://firebase.google.com/support/dynamic-links-faq)
+  and has been removed from the SDK.
+* Deprecated classes, methods and class constants have been removed.
+* Method arguments are now fully type-hinted
+* Type declarations have been simplified to reduce runtime overhead (e.g., `Stringable|string` to `string`).
+* The transitional `Kreait\Firebase\Contract\Transitional\FederatedUserFetcher::getUserByProviderUid()` method
+  has been moved into the `Kreait\Firebase\Contract\Auth` interface
+* Realtime Database objects considered value objects have been made final and readonly
+* `psr/log` has been moved from runtime dependencies to development dependencies
+* `Kreait\Firebase\Contract\Messaging::BATCH_MESSAGE_LIMIT` constant has been removed
+* Exception codes are no longer preserved when wrapping exceptions
+* `Kreait\Firebase\Messaging\CloudMessage` builder methods have been renamed to follow the `with*` pattern:
+  `toToken()` -> `withToken()`, `toTopic()` -> `withTopic()`, `toCondition()` -> `withCondition()`.
+  The old methods are deprecated but still available as aliases.
+
+See **[UPGRADE-8.0](UPGRADE-8.0.md) for more details on the changes between 7.x and 8.0.**
+
+## 7.x Changelog
+
+https://github.com/beste/firebase-php/blob/7.24.0/CHANGELOG.md

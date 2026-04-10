@@ -6,7 +6,6 @@
         <div class="branding-content px-5">
           <h1 class="brand-title">Printopia</h1>
           <p class="brand-subtitle">Start creating unique<br>Designs Today</p>
-
           <ul class="feature-list list-unstyled">
             <li><span class="check-icon">✔</span> Custom 3D Model Design</li>
             <li><span class="check-icon">✔</span> Design Consultation</li>
@@ -17,19 +16,13 @@
       </div>
 
       <div class="col-lg-6 d-flex align-items-center justify-content-center bg-white">
-        <div class="form-wrapper p-5">
+        <div class="form-wrapper p-5 w-100">
           <header class="form-header mb-4">
             <h2 class="welcome-text">Welcome Back</h2>
             <p class="text-muted">Sign In to your account to continue</p>
           </header>
 
-        <?php if(session()->getFlashdata('error')): ?>
-            <div class="alert alert-danger">
-                <?= session()->getFlashdata('error') ?>
-            </div>
-        <?php endif; ?>
-
-          <form action="<?= base_url('auth/login') ?>" method="POST">
+          <form id="loginForm">
             <div class="mb-3">
               <label class="form-label custom-label">Email Address <span class="text-danger">*</span></label>
               <div class="input-group">
@@ -46,14 +39,6 @@
                     <span class="input-group-text bg-white border-start-0 toggle-password" onclick="togglePassword()">👁</span>
                 </div>
             </div>
-
-            <script>
-                function togglePassword() {
-                    const passwordField = document.getElementById('password-field');
-                    const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
-                    passwordField.setAttribute('type', type);
-                }
-            </script>
 
             <div class="d-flex justify-content-between align-items-center mb-4 small">
               <div class="form-check">
@@ -79,3 +64,7 @@
   </div>
   <div class="bottom-accent"></div>
 </main>
+
+<!-- Include external JS -->
+<script src="<?= base_url('js/auth.js') ?>"></script>
+<link rel="stylesheet" href="<?= base_url('css/auth.css') ?>">

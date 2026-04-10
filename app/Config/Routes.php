@@ -13,6 +13,7 @@ $routes->get('products', 'Products::index');
 $routes->get('how-it-works', 'Howitwork::index');
 $routes->get('contact', 'Contact::index');
 $routes->get('custom-order', 'Index::customOrder');
+
 $routes->get('admin', 'Admin::index');
 $routes->get('employee', 'Employee::index');
 $routes->get('admin/gallery/files', 'Gallery::files');
@@ -81,13 +82,21 @@ $routes->post('designs/upload', 'Designs::upload');
 $routes->post('designs/delete/(:num)', 'Designs::delete/$1');
 
 // SIGNUP, LOGIN, LOGOUT
-$routes->get('/signup', 'Auth::showSignupForm');
-$routes->post('/auth/signup', 'Auth::signup');
+// Web pages
+$routes->get('/signup', 'Api\AuthController::showSignupForm');
+$routes->post('/signup', 'Api\AuthController::register'); // form submission
 
-$routes->get('/login', 'Auth::showLoginForm');
-$routes->post('/auth/login', 'Auth::login');
-$routes->get('/logout', 'Auth::logout');
+$routes->get('/login', 'Api\AuthController::showLoginForm');
+$routes->post('/login', 'Api\AuthController::login'); // form submission
+
+// API Routes
+$routes->group('api', function($routes) {
+    $routes->post('auth/register', 'Api\AuthController::register');
+    $routes->post('auth/login', 'Api\AuthController::login');
+    $routes->get('auth/login', 'Api\AuthController::login');
+});
 
 
 // FOR TEST
 $routes->get('/test', 'Test::index');
+$routes->get('/hash', 'Test::hashing');
