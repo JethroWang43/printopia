@@ -1,192 +1,190 @@
 <style>
+    :root {
+        --brand-bg: #ECA72C;
+        --brand-red: #92140C;
+        --brand-dark: #0d1f49;
+    }
+
     .topbar {
         position: sticky;
         top: 0;
-        z-index: 50;
-        background: var(--brand-gold);
-        border-bottom: 1px solid rgba(16, 34, 79, 0.15);
-        box-shadow: 0 6px 18px rgba(16, 34, 79, 0.15);
+        z-index: 1000;
+        background: var(--brand-bg);
+        border-bottom: 2px solid rgba(146, 20, 12, 0.1);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     }
 
     .topbar-inner {
-        min-height: 78px;
-        display: flex;
+        min-height: 70px;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr; 
         align-items: center;
-        justify-content: space-between;
-        gap: 20px;
+        padding: 0 24px;
+        max-width: 1400px;
+        margin: 0 auto;
     }
 
     .logo {
         display: flex;
         align-items: center;
-        gap: 10px;
-        font-weight: 800;
-        font-size: 1.25rem;
-        color: #0d1f49;
-        flex: 1;
+        text-decoration: none;
+        justify-self: start;
     }
+    .logo-img { height: 40px; width: auto; }
 
-    .logo-mark {
-        width: 34px;
-        height: 34px;
-        border-radius: 10px;
-        background: #0d1f49;
-        color: #f8cd64;
-        display: grid;
-        place-items: center;
-        font-weight: 800;
-        font-size: 1.05rem;
-    }
-
+    /* Desktop Navigation */
     .main-nav {
         display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: clamp(16px, 1.9vw, 30px);
-        font-size: 0.88rem;
-        color: #162757;
-        flex: 1.15;
+        gap: clamp(15px, 2.5vw, 35px);
+        justify-self: center;
     }
-
     .main-nav a {
-        position: relative;
-        font-weight: 600;
-        opacity: 0.9;
+        text-decoration: none;
+        color: var(--brand-dark);
+        font-weight: 700;
+        font-size: 0.95rem;
         padding: 8px 0;
+        position: relative;
     }
-
     .main-nav a.active::after {
         content: "";
         position: absolute;
-        left: 0;
-        bottom: 0;
-        width: 100%;
-        height: 3px;
-        background: #112255;
-        border-radius: 99px;
+        bottom: 0; left: 0; width: 100%; height: 3px;
+        background: var(--brand-red);
+        border-radius: 2px;
     }
 
-    .user-menu {
-        position: relative;
-        margin-left: auto;
-    }
-
-    .user-chip-btn {
-        display: inline-flex;
+    .actions {
+        justify-self: end;
+        display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 8px 13px;
-        border-radius: 12px;
-        border: 2px solid #122459;
-        background: rgba(255, 255, 255, 0.3);
-        font-size: 0.78rem;
-        font-weight: 600;
-        color: #132559;
-        cursor: pointer;
-        font-family: inherit;
-        line-height: 1;
+        gap: 15px;
     }
 
-    .user-dropdown {
-        position: absolute;
-        top: calc(100% + 8px);
-        right: 0;
-        min-width: 180px;
-        border: 1px solid #d7deee;
-        border-radius: 12px;
-        background: #ffffff;
-        box-shadow: 0 12px 22px rgba(16, 34, 79, 0.16);
-        overflow: hidden;
+    /* Mobile Toggle Button */
+    .menu-toggle {
         display: none;
-        z-index: 80;
-    }
-
-    .user-menu:hover .user-dropdown,
-    .user-menu:focus-within .user-dropdown {
-        display: block;
-    }
-
-    .user-dropdown a {
-        display: block;
-        width: 100%;
-        text-align: left;
-        padding: 10px 12px;
-        border: 0;
-        background: #ffffff;
-        color: #273257;
-        font: inherit;
-        font-size: 0.86rem;
-        font-weight: 600;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: var(--brand-dark);
         cursor: pointer;
+        padding: 5px;
     }
 
-    .user-dropdown a + a {
-        border-top: 1px solid #edf1f8;
+    .btn-login {
+        text-decoration: none;
+        background: var(--brand-red);
+        color: white;
+        padding: 8px 20px;
+        border-radius: 8px;
+        font-weight: 800;
+        font-size: 0.85rem;
+        box-shadow: 0 4px 0px #6d0e09;
+        transition: all 0.1s;
     }
 
-    .user-dropdown a:hover {
-        background: #f5f7fb;
-    }
-    /* logo image sizing */
-    .logo-img {
-        height: 30px;       /* smaller height */
-        width: auto;        /* maintain aspect ratio */
-    }
-
-    /* optional: adjust text size next to logo */
-    .logo-text {
-        font-size: 1.1rem;  /* adjust as needed */
-    }
-
-
-    @media (max-width: 780px) {
+    /* Responsive Logic */
+    @media (max-width: 992px) {
         .topbar-inner {
-            flex-wrap: wrap;
-            justify-content: center;
-            min-height: auto;
-            padding: 14px 0;
+            grid-template-columns: 1fr auto; /* Hide middle column space */
         }
 
-        .logo,
-        .user-menu {
-            flex: 0 0 auto;
-            margin-left: 0;
+        .menu-toggle {
+            display: block;
+            order: -1; /* Puts hamburger on far left */
+            margin-right: 15px;
         }
 
+        .logo {
+            justify-self: start;
+        }
+
+        /* Mobile Slide-down Menu */
         .main-nav {
+            display: none; /* Hidden by default */
+            position: absolute;
+            top: 100%;
+            left: 0;
             width: 100%;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 18px;
-            font-size: 0.92rem;
+            background: var(--brand-bg);
+            flex-direction: column;
+            gap: 0;
+            padding: 10px 0;
+            border-top: 1px solid rgba(0,0,0,0.05);
+            box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+        }
+
+        .main-nav.is-active {
+            display: flex;
+        }
+
+        .main-nav a {
+            padding: 15px 24px;
+            width: 100%;
+            border-bottom: 1px solid rgba(0,0,0,0.03);
+        }
+        
+        .main-nav a.active::after {
+            left: 0; width: 4px; height: 100%; top: 0; /* Side indicator on mobile */
         }
     }
+
+    /* Login/User chip styles remain the same as your previous code */
+    .user-chip { display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.25); border: 2px solid var(--brand-red); padding: 5px 12px; border-radius: 10px; cursor: pointer; }
+    .user-icon { background: var(--brand-red); color: white; width: 24px; height: 24px; border-radius: 5px; display: grid; place-items: center; font-weight: 800; font-size: 0.8rem; }
 </style>
 
 <header class="topbar">
-    <div class="container topbar-inner d-flex align-items-center justify-content-between">
+    <div class="topbar-inner">
         
-        <a class="logo" href="<?= base_url(); ?>">
-            <img src="<?= base_url('/assets/Logo.png'); ?>" alt="Printopia Logo" class="logo-img me-2">
-            <span>Printopia</span>
-        </a>
+        <div style="display: flex; align-items: center;">
+            <button class="menu-toggle" id="mobileMenuBtn" aria-label="Toggle Menu">☰</button>
+            <a class="logo" href="<?= base_url(); ?>">
+                <img src="<?= base_url('/assets/Logo.png'); ?>" alt="Printopia Logo" class="logo-img">
+            </a>
+        </div>
 
-        <nav class="main-nav" aria-label="Main navigation">
+        <nav class="main-nav" id="navLinks">
             <a href="<?= base_url(); ?>" class="<?= (($activePage ?? '') === 'home') ? 'active' : ''; ?>">Home</a>
             <a href="<?= base_url('products'); ?>" class="<?= (($activePage ?? '') === 'products') ? 'active' : ''; ?>">Products</a>
             <a href="<?= base_url('how-it-works'); ?>" class="<?= (($activePage ?? '') === 'how-it-works') ? 'active' : ''; ?>">How it works</a>
             <a href="<?= base_url('contact'); ?>" class="<?= (($activePage ?? '') === 'contact') ? 'active' : ''; ?>">Contact Us</a>
         </nav>
 
-        <!-- NEW AUTH BUTTONS -->
-        <div class="auth-actions d-flex align-items-center gap-2">
-            <a href="<?= base_url('login'); ?>" class="btn btn-outline-primary btn-sm">
-                Login
-            </a>
-            <a href="<?= base_url('signup'); ?>" class="btn btn-primary btn-sm fw-bold">
-                Sign Up
-            </a>
+        <div class="actions">
+            <?php if (session()->get('user_name')): ?>
+                <div class="user-menu-container" style="position: relative;" id="userMenu">
+                    <div class="user-chip">
+                        <div class="user-icon"><?= strtoupper(substr(session()->get('user_name'), 0, 1)) ?></div>
+                        <span style="font-weight: 800; color: var(--brand-dark); font-size: 0.9rem;"><?= esc(session()->get('user_name')) ?></span>
+                    </div>
+                    <div class="dropdown-menu-custom" style="position: absolute; right: 0; background: white; min-width: 160px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); border-radius: 8px; display: none; overflow: hidden; z-index: 100;">
+                        <a href="<?= base_url('customer') ?>" style="display: block; padding: 12px; color: var(--brand-dark); text-decoration: none; font-weight: 700;">Dashboard</a>
+                        <a href="<?= base_url('logout') ?>" style="display: block; padding: 12px; color: var(--brand-red); text-decoration: none; font-weight: 700; border-top: 1px solid #eee;">Logout</a>
+                    </div>
+                </div>
+            <?php else: ?>
+                <a href="<?= base_url('login'); ?>" class="btn-login">LOGIN</a>
+            <?php endif; ?>
         </div>
-
     </div>
 </header>
+
+<script>
+    // Mobile Menu Toggle
+    const mobileBtn = document.getElementById('mobileMenuBtn');
+    const navLinks = document.getElementById('navLinks');
+
+    mobileBtn.addEventListener('click', () => {
+        navLinks.classList.toggle('is-active');
+        mobileBtn.textContent = navLinks.classList.contains('is-active') ? '✕' : '☰';
+    });
+
+    // Desktop Dropdown
+    const userMenu = document.getElementById('userMenu');
+    if(userMenu) {
+        userMenu.onmouseover = () => userMenu.querySelector('.dropdown-menu-custom').style.display = 'block';
+        userMenu.onmouseout = () => userMenu.querySelector('.dropdown-menu-custom').style.display = 'none';
+    }
+</script>

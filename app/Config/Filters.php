@@ -77,8 +77,11 @@ class Filters extends BaseFilters
             'csrf' => ['except' => [
                 'admin/gallery/save_to_db', 
                 'trello-task/proxy',
-                'designs/upload', 
-                'api/*']], // Exclude CSRF for these routes
+                'designs/upload',
+                'designs/delete/*',
+                'api/*'
+            ]
+                      ], // Exclude CSRF for these routes
             // 'invalidchars',
         ],
         'after' => [
