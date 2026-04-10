@@ -4,7 +4,7 @@ namespace App\Models;
 use CodeIgniter\Model;
 
 class User_model extends Model {
-    protected $table = 'user_tbl';
+    protected $table = 'users_tbl';
     protected $primaryKey = 'user_id';
     protected $useAutoIncrement = true;
     protected $returnType = 'array';

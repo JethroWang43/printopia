@@ -86,12 +86,8 @@ $routes->post('/signup', 'Api\AuthController::register'); // form submission
 $routes->get('/login', 'Api\AuthController::showLoginForm');
 $routes->post('/login', 'Api\AuthController::login'); // form submission
 
-// API Routes
-$routes->group('api', function($routes) {
-    $routes->post('auth/register', 'Api\AuthController::register');
-    $routes->post('auth/login', 'Api\AuthController::login');
-    $routes->get('auth/login', 'Api\AuthController::login');
-});
+$routes->post('api/auth/register', 'Api\AuthController::register'); // API endpoint
+$routes->post('api/auth/login', 'Api\AuthController::login'); // API endpoint
 
 
 // FOR TEST

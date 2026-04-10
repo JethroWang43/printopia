@@ -18,22 +18,29 @@ class AuthController extends ResourceController
 
     public function register()
     {
-        $data = $this->request->getJSON(true);
+        $data = $this->request->getJSON(true) ?? $this->request->getPost();
 
         if (!isset($data['email']) || !isset($data['password'])) {
             return $this->fail("Email and password required");
         }
 
+        if(strlen($data['password']) < 6){
+            return $this->fail("Password must be at least 6 characters");
+        }
+
         $existing = $this->model->where('email', $data['email'])->first();
         if ($existing) return $this->fail("Email already registered");
 
-        $this->model->insert([
-            'first_name' => $data['first_name'] ?? null,
-            'last_name'  => $data['last_name'] ?? null,
+        $this->model->insert([ // palitan fields for Fname Lname cannot be null
+            'first_name' => $data['first_name'],
+            'middle_name' => $data['middle_name'] ?? null,
+            'last_name'  => $data['last_name'],
             'email'      => $data['email'],
             'password'   => password_hash($data['password'], PASSWORD_DEFAULT),
             'phone_number' => $data['phone_number'] ?? null,
-            'date_created' => date('Y-m-d H:i:s')
+            'role_id' => $data['role_id'] ?? 3,
+            'date_created' => date('Y-m-d H:i:s'),
+            'date_updated' => date('Y-m-d H:i:s'),
         ]);
 
         return $this->respond([
@@ -55,7 +62,7 @@ class AuthController extends ResourceController
 
     public function login()
     {
-        $data = $this->request->getJSON(true);
+        $data = $this->request->getJSON(true) ?? $this->request->getPost();
 
         if (!isset($data['email']) || !isset($data['password'])) {
             return $this->fail("Email and password required");
