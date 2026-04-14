@@ -55,7 +55,7 @@
 
           <p class="mt-4 text-center signup-text">
             Don't have an account? 
-            <a href="<?= base_url('signup'); ?>" class="fw-bold text-decoration-none">Sign Up here</a>
+            <a href="<?= base_url('/signup'); ?>" class="fw-bold text-decoration-none">Sign Up here</a>
           </p>
         </div>
       </div>
@@ -66,5 +66,5 @@
 </main>
 
 <!-- Include external JS -->
-<script src="<?= base_url('js/auth.js') ?>"></script>
-<link rel="stylesheet" href="<?= base_url('css/auth.css') ?>">
+<script src="<?= base_url('public/js/auth.js') ?>"></script>
+<link rel="stylesheet" href="<?= base_url('public/css/auth.css') ?>">

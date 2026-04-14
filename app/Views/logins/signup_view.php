@@ -92,5 +92,5 @@
 </main>
 
 <!-- Include external JS -->
-<script src="<?= base_url('js/auth.js') ?>"></script>
-<link rel="stylesheet" href="<?= base_url('css/auth.css') ?>">
+<script src="<?= base_url('public/js/auth.js') ?>"></script>
+<link rel="stylesheet" href="<?= base_url('public/css/auth.css') ?>">

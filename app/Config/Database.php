@@ -38,6 +38,7 @@ class Database extends Config
         'DBCollat'     => '',
         'swapPre'      => '',
         'schema'       => 'public',
+        'strictOn'     => false,
         'encrypt'      => true,
         'compress'     => false,
         'strictOn'     => false,
