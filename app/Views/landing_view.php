@@ -874,99 +874,121 @@
     </div>
 </body>
 
-<script>
-    // Your JavaScript code here
-    let localStream;
-    let peerConnection;
-    const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    function togglePopup(id) {
+<script>
+    // 1. INITIALIZE SUPABASE
+    const SUPABASE_URL = 'https://minktbutnmxwcinfxwpa.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pbmt0YnV0bm14d2NpbmZ4d3BhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MDkyMTcsImV4cCI6MjA5MTI4NTIxN30.-QS4ldybiYvwmu45frxqOGDXpNWk930bD4Bxt1bnuDs'; // Paste the long string here
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // 2. TOGGLE POPUP FUNCTION
+    // We attach it to 'window' to ensure the HTML buttons can always "see" it
+    window.togglePopup = function(id) {
         const popup = document.getElementById(id);
-        popup.style.display = (popup.style.display === 'flex') ? 'none' : 'flex';
+        if (!popup) return;
+        
+        // Toggle between none and flex
+        if (popup.style.display === 'flex') {
+            popup.style.display = 'none';
+        } else {
+            // Close other popups first so they don't overlap
+            document.querySelectorAll('.floating-popup').forEach(p => p.style.display = 'none');
+            popup.style.display = 'flex';
+        }
+    };
+
+    // --- CHAT SYSTEM ---
+    const messageSubscription = supabaseClient
+        .channel('public:messages')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+            const msg = payload.new;
+            displayMessage(msg.content, msg.sender === 'user' ? 'user' : 'admin');
+        })
+        .subscribe();
+
+    function displayMessage(text, type) {
+        const chatMessages = document.getElementById('chat-messages');
+        if (!chatMessages) return;
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `msg ${type}`;
+        msgDiv.innerText = text;
+        chatMessages.appendChild(msgDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    // WEBRTC AUDIO LOGIC (Calling)
-    document.getElementById('start-call-btn').onclick = async () => {
-        try {
-            document.getElementById('call-label').innerText = "Connecting...";
+    const sendBtn = document.getElementById('send-btn');
+    if (sendBtn) {
+        sendBtn.onclick = async () => {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
             
-            // 1. Get Audio
-            localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            
-            // 2. Setup WebRTC Peer
-            peerConnection = new RTCPeerConnection(config);
-            
-            // Add our audio to the connection
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            if (text !== "") {
+                const { error } = await supabaseClient
+                    .from('messages')
+                    .insert([{ content: text, sender: 'user' }]);
+                
+                if (error) console.error("Error sending message:", error);
+                input.value = "";
+            }
+        };
+    }
 
-            // Listen for remote audio from Admin
-            peerConnection.ontrack = (event) => {
-                document.getElementById('remote-audio').srcObject = event.streams[0];
-                document.getElementById('call-label').innerText = "On Call";
-            };
+    // --- CALL SYSTEM ---
+    let localStream;
+    let peerConnection;
+    const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+    let callTimer;
 
-            /* NOTE: Here is where Zai (Backend) needs to send the "Signal" 
-            to the Admin via WebSockets so they can answer.
-            */
-            console.log("WebRTC Offer created. Ready for signaling.");
+    const startCallBtn = document.getElementById('start-call-btn');
+    if (startCallBtn) {
+        startCallBtn.onclick = async () => {
+            try {
+                document.getElementById('call-label').innerText = "Connecting...";
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                peerConnection = new RTCPeerConnection(rtcConfig);
+                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-        } catch (err) {
-            alert("Could not access microphone: " + err);
-        }
-    };
+                peerConnection.ontrack = (event) => {
+                    document.getElementById('remote-audio').srcObject = event.streams[0];
+                    startTimer();
+                    document.getElementById('call-label').innerText = "On Call";
+                };
 
-    document.getElementById('end-call-btn').onclick = () => {
-        if (localStream) {
-            localStream.getTracks().forEach(track => track.stop());
-        }
-        if (peerConnection) {
-            peerConnection.close();
-        }
-        document.getElementById('call-label').innerText = "Call Ended";
-        setTimeout(() => togglePopup('call-popup'), 1000);
-    };
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        supabaseClient.from('signaling').insert([{ type: 'candidate', data: event.candidate }]);
+                    }
+                };
 
-    // CHAT LOGIC (Simple UI behavior)
-    // Improved Send Logic
-    document.getElementById('send-btn').onclick = () => {
-        const input = document.getElementById('chat-input');
-        const chatMessages = document.getElementById('chat-messages');
-        
-        if (input.value.trim() !== "") {
-            const msgDiv = document.createElement('div');
-            msgDiv.className = "msg user"; 
-            msgDiv.innerText = input.value;
-            chatMessages.appendChild(msgDiv);
-            
-            input.value = "";
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                await supabaseClient.from('signaling').insert([{ type: 'offer', data: offer }]);
 
-            // Mock Admin Response for testing
-            setTimeout(() => {
-                const adminDiv = document.createElement('div');
-                adminDiv.className = "msg admin";
-                adminDiv.innerText = "Thanks for the message! Our team will get back to you shortly.";
-                chatMessages.appendChild(adminDiv);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }, 1000);
-        }
-    };
+            } catch (err) {
+                alert("Call failed: " + err.message);
+            }
+        };
+    }
 
-    // Allow Enter key to send
-    document.getElementById('chat-input').addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') {
-            document.getElementById('send-btn').click();
-        }
-    });
+    function startTimer() {
+        let seconds = 0;
+        if (callTimer) clearInterval(callTimer);
+        callTimer = setInterval(() => {
+            seconds++;
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            document.getElementById('call-timer').innerText = `${mins}:${secs}`;
+        }, 1000);
+    }
 
-    let seconds = 0;
-    const timerInterval = setInterval(() => {
-        seconds++;
-        const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
-        const secs = (seconds % 60).toString().padStart(2, '0');
-        document.getElementById('call-timer').innerText = `${mins}:${secs}`;
-    }, 1000);
-
-    // Remember to clearInterval(timerInterval) in the end-call logic!
+    // Enter key support for chat
+    const chatInput = document.getElementById('chat-input');
+    if (chatInput) {
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendBtn.click();
+        });
+    }
 </script>
 </html>
