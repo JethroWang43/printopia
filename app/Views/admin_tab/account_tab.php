@@ -4,7 +4,7 @@
         border: 1px solid #d6dfed;
         border-radius: 12px;
         box-shadow: 0 8px 16px rgba(16, 34, 79, 0.06);
-        padding: 10px;
+        padding: 14px;
         min-height: 620px;
     }
 
@@ -12,23 +12,24 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 10px;
-        padding: 2px 4px;
+        gap: 14px;
+        margin-bottom: 14px;
+        padding: 4px 2px;
     }
 
     .account-topbar h3 {
         margin: 0;
-        color: #243458;
-        font-size: 1.06rem;
+        color: #1a2847;
+        font-size: 1.1rem;
         font-weight: 700;
+        letter-spacing: -0.3px;
     }
 
     .account-add-btn {
         min-height: 36px;
-        border: 1px solid #7f1d1d;
+        border: 1px solid #8a1c1c;
         border-radius: 8px;
-        background: linear-gradient(180deg, #9b1b11 0%, #7f150d 100%);
+        background: linear-gradient(180deg, #a82424 0%, #7f1512 100%);
         color: #ffffff;
         padding: 0 14px;
         font-family: inherit;
@@ -38,31 +39,46 @@
         display: inline-flex;
         align-items: center;
         gap: 8px;
+        transition: all 0.15s ease;
+    }
+
+    .account-add-btn:hover {
+        background: linear-gradient(180deg, #b82c2c 0%, #8f1f19 100%);
+        box-shadow: 0 6px 12px rgba(168, 36, 36, 0.25);
+        transform: translateY(-1px);
     }
 
     .account-toolbar {
         border: 1px solid #5ea5f6;
         border-radius: 8px;
-        padding: 8px;
+        padding: 10px;
         display: grid;
         grid-template-columns: minmax(220px, 1fr) 180px;
-        gap: 8px;
-        margin-bottom: 12px;
+        gap: 10px;
+        margin-bottom: 14px;
+        background: linear-gradient(135deg, #f9fbff 0%, #f5f8ff 100%);
     }
 
     .account-search,
     .account-filter {
-        min-height: 30px;
+        min-height: 32px;
         border: 1px solid #b4bfd4;
-        border-radius: 14px;
+        border-radius: 16px;
         background: #ffffff;
         display: flex;
         align-items: center;
         gap: 8px;
-        padding: 0 10px;
+        padding: 0 12px;
         color: #4e5d7d;
         font-size: 0.8rem;
         font-weight: 600;
+        transition: all 0.15s ease;
+    }
+
+    .account-search:focus-within,
+    .account-filter:focus-within {
+        border-color: #5ea5f6;
+        box-shadow: 0 0 0 3px rgba(94, 165, 246, 0.1);
     }
 
     .account-search input,
@@ -75,21 +91,25 @@
         color: #2f3e64;
     }
 
+    .account-filter select {
+        cursor: pointer;
+    }
+
     .account-list {
         display: grid;
         gap: 8px;
     }
 
     .account-list-head {
-        border: 1px solid #d8e1f1;
-        border-radius: 8px;
-        background: #f8fbff;
-        padding: 8px 10px;
+        border: 1px solid #d0dcea;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #f5f8ff 0%, #eef2fb 100%);
+        padding: 10px 14px;
         display: grid;
-        grid-template-columns: minmax(150px, 1.15fr) minmax(190px, 1.4fr) minmax(140px, 1fr) minmax(92px, 0.7fr) minmax(120px, 0.9fr) 64px;
+        grid-template-columns: 1fr 1.2fr 1fr 1fr 44px;
         align-items: center;
-        gap: 10px;
-        margin-bottom: 8px;
+        gap: 14px;
+        margin-bottom: 10px;
     }
 
     .account-list-head .head-name {
@@ -97,15 +117,11 @@
     }
 
     .account-list-head span {
-        color: #4f5f83;
-        font-size: 0.78rem;
+        color: #3d5480;
+        font-size: 0.77rem;
         font-weight: 700;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
-    }
-
-    .account-list-head .head-users {
-        text-align: center;
     }
 
     .account-list-head .head-email,
@@ -120,15 +136,15 @@
 
     .account-item {
         border: 1px solid #e1e6f1;
-        border-radius: 8px;
-        background: #f4f5f7;
-        padding: 8px 10px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        padding: 12px 14px;
         display: grid;
-        grid-template-columns: minmax(150px, 1.15fr) minmax(190px, 1.4fr) minmax(140px, 1fr) minmax(92px, 0.7fr) minmax(120px, 0.9fr) 64px;
+        grid-template-columns: 1fr 1.2fr 1fr 1fr 44px;
         align-items: center;
-        gap: 10px;
+        gap: 14px;
         cursor: pointer;
-        transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .account-item > div {
@@ -136,16 +152,19 @@
     }
 
     .account-item:hover {
-        border-color: #c8d4ea;
-        box-shadow: 0 8px 16px rgba(16, 34, 79, 0.07);
-        transform: translateY(-1px);
+        border-color: #b4c7e8;
+        background: linear-gradient(135deg, #ffffff 0%, #e8f0ff 100%);
+        box-shadow: 0 12px 24px rgba(16, 34, 79, 0.1), 0 0 0 1px rgba(88, 130, 220, 0.2);
+        transform: translateY(-2px);
     }
 
     .account-item strong {
         display: block;
-        color: #253556;
-        font-size: 0.96rem;
-        line-height: 1.2;
+        color: #1a2847;
+        font-size: 0.98rem;
+        font-weight: 600;
+        line-height: 1.3;
+        letter-spacing: -0.3px;
     }
 
     .account-item p {
@@ -158,45 +177,58 @@
     .account-email,
     .account-phone,
     .account-last-entered {
-        color: #5e6d8e;
-        font-size: 0.82rem;
-        line-height: 1.2;
+        color: #556b85;
+        font-size: 0.85rem;
+        line-height: 1.25;
         text-align: left;
+        font-weight: 500;
+    }
+
+    .account-email {
+        color: #5a7ba8;
+    }
+
+    .account-phone {
+        color: #5f6d8a;
     }
 
     .account-last-entered {
-        color: #42557d;
+        color: #3d5480;
         font-weight: 600;
+        font-size: 0.84rem;
+        text-align: left;
     }
 
     .account-role {
+        display: none;
         border-radius: 999px;
-        padding: 2px 10px;
+        padding: 3px 12px;
         color: #fff;
-        font-size: 0.68rem;
+        font-size: 0.7rem;
         font-weight: 700;
-        line-height: 1.3;
+        line-height: 1.4;
         text-transform: capitalize;
         justify-self: center;
     }
 
     .account-role.employee {
-        background: #d59312;
+        background: linear-gradient(180deg, #d59312 0%, #c68510 100%);
     }
 
     .account-role.user {
-        background: #0bb71c;
+        background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
     }
 
     .account-modal-backdrop {
         position: fixed;
         inset: 0;
-        background: rgba(15, 24, 44, 0.5);
+        background: rgba(15, 24, 44, 0.55);
         z-index: 1300;
         display: none;
         align-items: center;
         justify-content: center;
         padding: 14px;
+        backdrop-filter: blur(2px);
     }
 
     .account-modal-backdrop.show {
@@ -205,11 +237,23 @@
 
     .account-modal {
         width: min(520px, 96vw);
-        border: 1px solid #d7dff0;
-        border-radius: 12px;
+        border: 1px solid #dce4f3;
+        border-radius: 14px;
         background: #ffffff;
-        box-shadow: 0 20px 36px rgba(16, 34, 79, 0.24);
+        box-shadow: 0 24px 48px rgba(16, 34, 79, 0.22), 0 0 1px rgba(0, 0, 0, 0.06);
         overflow: hidden;
+        animation: modalSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes modalSlideUp {
+        from {
+            opacity: 0;
+            transform: translateY(16px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .account-modal-head {
@@ -217,33 +261,43 @@
         align-items: center;
         justify-content: space-between;
         gap: 10px;
-        padding: 12px 14px;
-        border-bottom: 1px solid #e8edf7;
-        background: #f7f9ff;
+        padding: 16px 18px;
+        border-bottom: 1px solid #eaeffb;
+        background: linear-gradient(135deg, #f7f9ff 0%, #f0f4fc 100%);
     }
 
     .account-modal-head h4 {
         margin: 0;
-        color: #23345a;
-        font-size: 1rem;
+        color: #1a2847;
+        font-size: 1.04rem;
+        font-weight: 700;
+        letter-spacing: -0.2px;
     }
 
     .account-modal-head small {
         display: block;
-        margin-top: 2px;
-        color: #647392;
-        font-size: 0.76rem;
+        margin-top: 3px;
+        color: #667691;
+        font-size: 0.77rem;
+        font-weight: 500;
     }
 
     .account-modal-close {
         width: 32px;
         height: 32px;
-        border: 1px solid #d0d8e9;
+        border: 1px solid #d8dfe9;
         border-radius: 8px;
-        background: #ffffff;
-        color: #33486f;
+        background: linear-gradient(180deg, #ffffff 0%, #f8f9fb 100%);
+        color: #3d5480;
         font-size: 1rem;
         cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .account-modal-close:hover {
+        border-color: #c8d4e6;
+        background: linear-gradient(180deg, #eef2fb 0%, #e5ecf8 100%);
+        box-shadow: 0 4px 10px rgba(88, 130, 220, 0.15);
     }
 
     .account-modal-body {
@@ -291,79 +345,177 @@
     }
 
     .account-form-field label {
-        color: #45567c;
-        font-size: 0.78rem;
+        color: #3d5480;
+        font-size: 0.77rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.06em;
     }
 
     .account-form-field input,
     .account-form-field select {
         min-height: 38px;
-        border: 1px solid #cfd8ea;
+        border: 1px solid #d0daea;
         border-radius: 8px;
-        padding: 0 10px;
+        padding: 0 12px;
         font-family: inherit;
         font-size: 0.86rem;
         color: #2f3e64;
+        transition: all 0.15s ease;
+    }
+
+    .account-form-field input:focus,
+    .account-form-field select:focus {
+        outline: none;
+        border-color: #5ea5f6;
+        box-shadow: 0 0 0 3px rgba(94, 165, 246, 0.1);
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
     }
 
     .account-modal-actions {
         display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        margin-top: 4px;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-top: 8px;
     }
 
     .account-modal-actions button {
         min-height: 36px;
         border-radius: 8px;
         border: 1px solid #cfd8ea;
-        padding: 0 12px;
+        padding: 0 14px;
         font-family: inherit;
         font-size: 0.82rem;
         font-weight: 700;
         cursor: pointer;
+        transition: all 0.15s ease;
     }
 
     .account-modal-cancel {
-        background: #f4f7fd;
-        color: #374a72;
+        background: linear-gradient(180deg, #f5f7fd 0%, #eff3fa 100%);
+        color: #4a5d7a;
+        border-color: #d8dfe9;
+    }
+
+    .account-modal-cancel:hover {
+        border-color: #c8d4e6;
+        background: linear-gradient(180deg, #eff3fa 0%, #e8edf7 100%);
+        box-shadow: 0 4px 8px rgba(16, 34, 79, 0.08);
     }
 
     .account-modal-save {
-        border-color: #7f1d1d;
-        background: linear-gradient(180deg, #9b1b11 0%, #7f150d 100%);
+        border-color: #8a1c1c;
+        background: linear-gradient(180deg, #a82424 0%, #7f1512 100%);
         color: #ffffff;
     }
 
+    .account-modal-save:hover {
+        background: linear-gradient(180deg, #b82c2c 0%, #8f1f19 100%);
+        border-color: #9a2222;
+        box-shadow: 0 6px 12px rgba(168, 36, 36, 0.2);
+        transform: translateY(-1px);
+    }
+
     .account-modal-save.update-mode {
-        background: linear-gradient(180deg, #7f1d1d 0%, #66150f 100%);
+        background: linear-gradient(180deg, #8a1c1c 0%, #6f1410 100%);
+    }
+
+    .account-modal-save.update-mode:hover {
+        background: linear-gradient(180deg, #9a2222 0%, #7f1812 100%);
     }
 
     .account-edit-btn {
-        width: 30px;
-        height: 30px;
-        border: 1px solid #d1d7e6;
+        width: 36px;
+        height: 36px;
+        border: 1px solid #c8d4e6;
         border-radius: 8px;
-        background: #ffffff;
-        color: #33486f;
+        background: linear-gradient(180deg, #ffffff 0%, #f8f9fb 100%);
+        color: #3d5480;
         font-size: 0.95rem;
         cursor: pointer;
-        display: inline-grid;
-        place-items: center;
-        justify-self: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s ease;
+    }
+
+    .account-edit-btn:hover {
+        border-color: #b4c7e8;
+        background: linear-gradient(180deg, #eef2fb 0%, #e5ecf8 100%);
+        color: #2a4680;
+        box-shadow: 0 4px 10px rgba(88, 130, 220, 0.15);
+    }
+
+    .account-danger-btn {
+        min-height: 36px;
+        border: 1px solid #f0c5d9;
+        border-radius: 8px;
+        background: linear-gradient(180deg, #ffe8f1 0%, #ffdae6 100%);
+        color: #c23e4a;
+        padding: 0 14px;
+        font-family: inherit;
+        font-size: 0.82rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .account-danger-btn:hover {
+        border-color: #e8a5bb;
+        background: linear-gradient(180deg, #ffd4e8 0%, #ffc5d7 100%);
+        color: #a8293b;
+        box-shadow: 0 6px 12px rgba(211, 47, 47, 0.18);
+        transform: translateY(-1px);
     }
 
     .account-empty {
-        border: 1px dashed #d7deec;
-        border-radius: 10px;
-        padding: 20px;
+        border: 2px dashed #d0dcea;
+        border-radius: 12px;
+        padding: 24px;
         text-align: center;
-        color: #647392;
-        font-size: 0.86rem;
-        background: #f8faff;
+        color: #667691;
+        font-size: 0.88rem;
+        background: linear-gradient(135deg, #f9fbff 0%, #f5f8ff 100%);
+    }
+
+    .account-view-modal {
+        width: min(440px, 96vw);
+        border: 1px solid #dce4f3;
+        border-radius: 14px;
+        background: #ffffff;
+        box-shadow: 0 24px 48px rgba(16, 34, 79, 0.22), 0 0 1px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+    }
+
+    .account-view-body {
+        padding: 14px;
+        display: grid;
+        gap: 10px;
+    }
+
+    .account-view-row {
+        display: grid;
+        gap: 4px;
+        border: 1px solid #e5ebf7;
+        border-radius: 10px;
+        padding: 10px;
+        background: #f8fbff;
+    }
+
+    .account-view-row label {
+        color: #5a6c8f;
+        font-size: 0.74rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    .account-view-row span {
+        color: #1f3158;
+        font-size: 0.9rem;
+        font-weight: 600;
+        word-break: break-word;
     }
 
     @media (max-width: 900px) {
@@ -419,7 +571,6 @@
             <span class="head-name">Name</span>
             <span class="head-email">Email</span>
             <span class="head-phone">Phone Number</span>
-            <span class="head-users">Users</span>
             <span class="head-last-entered">Last Entered</span>
             <span class="head-edit">Edit</span>
         </div>
@@ -504,6 +655,37 @@
                     </div>
                 </div>
             </form>
+        </div>
+
+        <div class="account-modal-backdrop" id="accountViewModal" aria-hidden="true">
+            <article class="account-view-modal" role="dialog" aria-labelledby="accountViewTitle">
+                <div class="account-modal-head">
+                    <div>
+                        <h4 id="accountViewTitle">Account Overview</h4>
+                        <small>Read-only details for this account.</small>
+                    </div>
+                    <button type="button" class="account-modal-close" id="accountViewClose" aria-label="Close account overview">✕</button>
+                </div>
+
+                <div class="account-view-body">
+                    <div class="account-view-row">
+                        <label>Name</label>
+                        <span id="accountViewName">-</span>
+                    </div>
+                    <div class="account-view-row">
+                        <label>Email</label>
+                        <span id="accountViewEmail">-</span>
+                    </div>
+                    <div class="account-view-row">
+                        <label>Phone Number</label>
+                        <span id="accountViewPhone">-</span>
+                    </div>
+                    <div class="account-view-row">
+                        <label>Last Entered</label>
+                        <span id="accountViewLastEntered">-</span>
+                    </div>
+                </div>
+            </article>
         </div>
     </section>
 </article>

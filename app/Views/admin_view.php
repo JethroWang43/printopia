@@ -471,21 +471,227 @@
 
                             <article class="panel">
                                 <h3>Inventory</h3>
-                                <div class="inventory-list">
-                                    <div class="inventory-item">
-                                        <span>SKU INK-MG-002 -<br>0 left (threshold 10)</span>
-                                        <strong>Low Stock<br>Last Updated: -</strong>
-                                    </div>
-                                    <div class="inventory-item">
-                                        <span>SKU INK-MG-002 -<br>0 left (threshold 10)</span>
-                                        <strong>Low Stock<br>Last Updated: -</strong>
-                                    </div>
-                                    <div class="inventory-item">
-                                        <span>SKU INK-MG-002 -<br>0 left (threshold 10)</span>
-                                        <strong>Low Stock<br>Last Updated: -</strong>
-                                    </div>
+                                
+                                <style>
+                                    .inventory-filter-buttons {
+                                        display: flex;
+                                        gap: 6px;
+                                        margin-bottom: 10px;
+                                        flex-wrap: wrap;
+                                    }
+                                    
+                                    .inventory-filter-btn {
+                                        flex: 1;
+                                        min-width: 60px;
+                                        padding: 6px 8px;
+                                        border: 1px solid #ddd;
+                                        border-radius: 6px;
+                                        background: #fff;
+                                        font-size: 0.75rem;
+                                        font-weight: 600;
+                                        cursor: pointer;
+                                        color: #666;
+                                        transition: all 0.15s ease;
+                                    }
+                                    
+                                    .inventory-filter-btn:hover {
+                                        background: #f0f0f0;
+                                    }
+                                    
+                                    .inventory-filter-btn.active {
+                                        background: #132659;
+                                        color: #fff;
+                                        border-color: #132659;
+                                    }
+                                    
+                                    .inventory-list-scroll {
+                                        max-height: 320px;
+                                        overflow-y: auto;
+                                        border: 1px solid #e0e0e0;
+                                        border-radius: 6px;
+                                        padding: 8px;
+                                    }
+                                    
+                                    .inventory-list-scroll::-webkit-scrollbar {
+                                        width: 6px;
+                                    }
+                                    
+                                    .inventory-list-scroll::-webkit-scrollbar-thumb {
+                                        background: #ccc;
+                                        border-radius: 3px;
+                                    }
+                                    
+                                    .inventory-list-scroll::-webkit-scrollbar-track {
+                                        background: #f5f5f5;
+                                    }
+                                    
+                                    .inventory-item-scrollable {
+                                        padding: 8px;
+                                        border-radius: 6px;
+                                        margin-bottom: 6px;
+                                        background: #f9f9f9;
+                                        border-left: 4px solid #999;
+                                        font-size: 0.85rem;
+                                    }
+                                    
+                                    .inventory-item-scrollable.good {
+                                        border-left-color: #0b84cf;
+                                        background: #f0f7ff;
+                                    }
+                                    
+                                    .inventory-item-scrollable.warn {
+                                        border-left-color: #c98a16;
+                                        background: #fff9f0;
+                                    }
+                                    
+                                    .inventory-item-scrollable.restock {
+                                        border-left-color: #ce1f1f;
+                                        background: #fff0f0;
+                                    }
+                                    
+                                    .inventory-item-scrollable strong {
+                                        display: block;
+                                        color: #132659;
+                                        margin-bottom: 2px;
+                                        font-weight: 700;
+                                    }
+                                    
+                                    .inventory-item-scrollable span {
+                                        display: block;
+                                        color: #666;
+                                        font-size: 0.8rem;
+                                        line-height: 1.3;
+                                    }
+                                </style>
+                                
+                                <div class="inventory-filter-buttons">
+                                    <button class="inventory-filter-btn active" data-filter="all">All</button>
+                                    <button class="inventory-filter-btn" data-filter="good">Good</button>
+                                    <button class="inventory-filter-btn" data-filter="warn">Warning</button>
+                                    <button class="inventory-filter-btn" data-filter="restock">Re-Stock</button>
+                                </div>
+                                
+                                <div class="inventory-list-scroll" id="sidebarInventoryList">
+                                    <div style="text-align:center; color:#999; padding:20px; font-size:0.9rem;">Loading inventory...</div>
                                 </div>
                             </article>
+
+                            <script>
+                                // Global inventory refres function for sidebar
+                                window.refreshSidebarInventory = window.refreshSidebarInventory || (async function() {
+                                    try {
+                                        const response = await fetch('<?= base_url('admin/inventory/list'); ?>');
+                                        const data = await response.json();
+                                        const items = Array.isArray(data?.data) ? data.data : [];
+                                        
+                                        const container = document.getElementById('sidebarInventoryList');
+                                        if (!container) return;
+                                        
+                                        const computeStatus = (item) => {
+                                            const qty = Number(item.stock_qty) || 0;
+                                            const reorder = Number(item.reorder_level) || 0;
+                                            if (qty <= reorder) return 'restock';
+                                            if (qty <= reorder + 5) return 'warn';
+                                            return 'good';
+                                        };
+                                        
+                                        const statusLabels = { good: 'Good', warn: 'Low Stock', restock: 'Re-Stock' };
+                                        const selectedFilter = document.querySelector('.inventory-filter-btn.active')?.dataset.filter || 'all';
+                                        const filtered = selectedFilter === 'all' 
+                                            ? items 
+                                            : items.filter(item => computeStatus(item) === selectedFilter);
+                                        
+                                        if (!filtered.length) {
+                                            container.innerHTML = '<div style="text-align:center; color:#999; padding:20px; font-size:0.9rem;">No items in this category</div>';
+                                            return;
+                                        }
+                                        
+                                        container.innerHTML = filtered.map(item => {
+                                            const status = computeStatus(item);
+                                            const qty = Number(item.stock_qty) || 0;
+                                            const reorder = Number(item.reorder_level) || 0;
+                                            
+                                            return `
+                                                <div class="inventory-item-scrollable ${status}">
+                                                    <strong>${statusLabels[status]}</strong>
+                                                    <span>${item.description}</span>
+                                                    <span>${qty} left (threshold ${reorder}) • #${item.inventory_id}</span>
+                                                </div>
+                                            `;
+                                        }).join('');
+                                    } catch (error) {
+                                        console.error('Failed to refresh sidebar inventory:', error);
+                                    }
+                                });
+                                
+                                (async function() {
+                                    let allItems = [];
+                                    let selectedFilter = 'all';
+                                    
+                                    const computeStatus = (item) => {
+                                        const qty = Number(item.stock_qty) || 0;
+                                        const reorder = Number(item.reorder_level) || 0;
+                                        if (qty <= reorder) return 'restock';
+                                        if (qty <= reorder + 5) return 'warn';
+                                        return 'good';
+                                    };
+                                    
+                                    const statusLabels = { good: 'Good', warn: 'Low Stock', restock: 'Re-Stock' };
+                                    
+                                    const renderItems = () => {
+                                        const container = document.getElementById('sidebarInventoryList');
+                                        const filtered = selectedFilter === 'all' 
+                                            ? allItems 
+                                            : allItems.filter(item => computeStatus(item) === selectedFilter);
+                                        
+                                        if (!filtered.length) {
+                                            container.innerHTML = '<div style="text-align:center; color:#999; padding:20px; font-size:0.9rem;">No items in this category</div>';
+                                            return;
+                                        }
+                                        
+                                        container.innerHTML = filtered.map(item => {
+                                            const status = computeStatus(item);
+                                            const qty = Number(item.stock_qty) || 0;
+                                            const reorder = Number(item.reorder_level) || 0;
+                                            
+                                            return `
+                                                <div class="inventory-item-scrollable ${status}">
+                                                    <strong>${statusLabels[status]}</strong>
+                                                    <span>${item.description}</span>
+                                                    <span>${qty} left (threshold ${reorder}) • #${item.inventory_id}</span>
+                                                </div>
+                                            `;
+                                        }).join('');
+                                    };
+                                    
+                                    // Setup filter buttons
+                                    document.querySelectorAll('.inventory-filter-btn').forEach(btn => {
+                                        btn.addEventListener('click', () => {
+                                            document.querySelectorAll('.inventory-filter-btn').forEach(b => b.classList.remove('active'));
+                                            btn.classList.add('active');
+                                            selectedFilter = btn.dataset.filter;
+                                            renderItems();
+                                        });
+                                    });
+                                    
+                                    // Load data
+                                    try {
+                                        const response = await fetch('<?= base_url('admin/inventory/list'); ?>');
+                                        const data = await response.json();
+                                        allItems = Array.isArray(data?.data) ? data.data : [];
+                                        
+                                        if (!allItems.length) {
+                                            document.getElementById('sidebarInventoryList').innerHTML = '<div style="text-align:center; color:#999; padding:20px; font-size:0.9rem;">No inventory items</div>';
+                                            return;
+                                        }
+                                        
+                                        renderItems();
+                                    } catch (error) {
+                                        console.error('Failed to load sidebar inventory:', error);
+                                        document.getElementById('sidebarInventoryList').innerHTML = '<div style="text-align:center; color:#999; padding:20px; font-size:0.9rem;">Error loading</div>';
+                                    }
+                                })();
+                            </script>
                         </div>
                     </div>
                 </div>

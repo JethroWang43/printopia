@@ -163,6 +163,18 @@
 		font-size: 0.95rem;
 	}
 
+	.inv-row-clickable {
+		cursor: pointer;
+	}
+
+	.inv-row-clickable:hover {
+		background: #f4f8ff;
+	}
+
+	.inv-grid-card[data-view-id] {
+		cursor: pointer;
+	}
+
 	.inv-pill {
 		display: inline-flex;
 		align-items: center;
@@ -291,6 +303,25 @@
 		background: #ffffff;
 	}
 
+	.inv-textarea {
+		width: 100%;
+		min-height: 84px;
+		border: 1px solid #ced8ea;
+		border-radius: 8px;
+		padding: 8px 10px;
+		font-family: inherit;
+		font-size: 0.9rem;
+		color: #2d3a5d;
+		background: #ffffff;
+		resize: vertical;
+	}
+
+	.inv-help {
+		margin-top: 6px;
+		font-size: 0.78rem;
+		color: #6b7798;
+	}
+
 	.inv-modal-actions {
 		display: flex;
 		justify-content: flex-end;
@@ -299,7 +330,8 @@
 	}
 
 	.inv-secondary-btn,
-	.inv-primary-btn {
+	.inv-primary-btn,
+	.inv-danger-btn {
 		border-radius: 8px;
 		padding: 8px 12px;
 		font-family: inherit;
@@ -318,6 +350,46 @@
 		border: 1px solid #0f72b4;
 		background: #198bd2;
 		color: #ffffff;
+	}
+
+	.inv-danger-btn {
+		border: 1px solid #efc1c1;
+		background: #fff4f4;
+		color: #b43a3a;
+	}
+
+	.inv-danger-btn:hover {
+		background: #ffe9e9;
+		border-color: #e7a8a8;
+	}
+
+	.inv-view-grid {
+		display: grid;
+		gap: 8px;
+	}
+
+	.inv-view-item {
+		border: 1px solid #dfe8f7;
+		border-radius: 8px;
+		padding: 10px;
+		background: #f8fbff;
+		display: grid;
+		gap: 3px;
+	}
+
+	.inv-view-item label {
+		font-size: 0.74rem;
+		font-weight: 700;
+		color: #5a6d90;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+	}
+
+	.inv-view-item span {
+		font-size: 0.9rem;
+		font-weight: 600;
+		color: #1f3158;
+		word-break: break-word;
 	}
 
 	@media (max-width: 900px) {
@@ -346,7 +418,6 @@
 
 		<div class="inv-toolbar">
 			<div class="inv-field">🔍 <input type="text" id="invSearchInput" placeholder="Search inventory"></div>
-			<div class="inv-field">▾ <select id="invCategoryFilter"><option value="all">All Categories</option><option value="drinkware">Drinkware</option><option value="banner">Banner</option><option value="apparel">Apparel</option></select></div>
 			<div class="inv-field">◻ <select id="invStatusFilter"><option value="all">All Status</option><option value="good">Good</option><option value="warn">Warning</option><option value="restock">Re-Stock</option></select></div>
 			<div class="inv-field inv-view-toggle"><button type="button" id="invListViewBtn" class="active">List</button><button type="button" id="invGridViewBtn">Grid</button></div>
 		</div>
@@ -355,11 +426,12 @@
 			<table class="inv-table">
 				<thead>
 					<tr>
-						<th>ID</th>
-						<th>Name</th>
+						<th>Inventory ID</th>
+						<th>Product Name</th>
 						<th>Status</th>
 						<th>Description</th>
-						<th>Quantity</th>
+						<th>Stock Qty</th>
+						<th>Reorder Level</th>
 						<th></th>
 					</tr>
 				</thead>
@@ -375,7 +447,7 @@
 			<span id="invPageMeta">1 / 1</span>
 			<button type="button" id="invPageNext">Next →</button>
 		</div>
-		<p class="inv-note">Data is saved in browser storage only. Database is not connected yet.</p>
+		<p class="inv-note">Inventory data is loaded from the server database.</p>
 	</section>
 
 	<div class="inv-modal-backdrop" id="invModalBackdrop" aria-hidden="true">
@@ -386,37 +458,64 @@
 			</div>
 			<div class="inv-form-grid">
 				<div class="inv-field-block">
-					<label for="invNameInput">Name</label>
-					<input id="invNameInput" class="inv-input" type="text">
+					<label for="invProductNameInput">Product Name</label>
+					<input id="invProductNameInput" class="inv-input" type="text" placeholder="e.g. Poster Paper, Canvas">
+					<div class="inv-help">Product or material name.</div>
 				</div>
 				<div class="inv-field-block">
-					<label for="invCategoryInput">Category</label>
-					<select id="invCategoryInput" class="inv-select">
-						<option value="drinkware">Drinkware</option>
-						<option value="banner">Banner</option>
-						<option value="apparel">Apparel</option>
-					</select>
-				</div>
-				<div class="inv-field-block">
-					<label for="invStatusInput">Status</label>
-					<select id="invStatusInput" class="inv-select">
-						<option value="good">Good</option>
-						<option value="warn">Warning</option>
-						<option value="restock">Re-Stock</option>
-					</select>
-				</div>
-				<div class="inv-field-block">
-					<label for="invDescriptionInput">Description</label>
-					<input id="invDescriptionInput" class="inv-input" type="text">
-				</div>
-				<div class="inv-field-block">
-					<label for="invQuantityInput">Quantity</label>
+					<label for="invQuantityInput">Stock Quantity</label>
 					<input id="invQuantityInput" class="inv-input" type="number" min="0">
+					<div class="inv-help">Current total quantity available.</div>
+				</div>
+				<div class="inv-field-block">
+					<label for="invDescriptionInput">Item Detail</label>
+					<textarea id="invDescriptionInput" class="inv-textarea" placeholder="Enter material/spec details (e.g. Canvas matte 13oz, 24x36)."></textarea>
+					<div class="inv-help">Provide specific material and usage detail for admin tracking.</div>
+				</div>
+				<div class="inv-field-block">
+					<label for="invReorderInput">Reorder Level</label>
+					<input id="invReorderInput" class="inv-input" type="number" min="0">
+					<div class="inv-help">Status changes to Re-Stock when stock is at or below this level.</div>
 				</div>
 			</div>
 			<div class="inv-modal-actions">
-				<button type="button" class="inv-secondary-btn" id="invModalCancel">Cancel</button>
+				<button type="button" class="inv-danger-btn" id="invModalDelete" style="display:none;">Delete</button>
 				<button type="button" class="inv-primary-btn" id="invModalSave">Save</button>
+			</div>
+		</div>
+	</div>
+
+	<div class="inv-modal-backdrop" id="invViewModalBackdrop" aria-hidden="true">
+		<div class="inv-modal" role="dialog" aria-labelledby="invViewTitle">
+			<div class="inv-modal-head">
+				<h4 id="invViewTitle">Inventory Overview</h4>
+				<button type="button" class="inv-modal-close" id="invViewModalClose">X</button>
+			</div>
+			<div class="inv-view-grid">
+				<div class="inv-view-item">
+					<label>Inventory ID</label>
+					<span id="invViewInventoryId">-</span>
+				</div>
+				<div class="inv-view-item">
+					<label>Product Name</label>
+					<span id="invViewProductName">-</span>
+				</div>
+				<div class="inv-view-item">
+					<label>Status</label>
+					<span id="invViewStatus">-</span>
+				</div>
+				<div class="inv-view-item">
+					<label>Description</label>
+					<span id="invViewDescription">-</span>
+				</div>
+				<div class="inv-view-item">
+					<label>Stock Quantity</label>
+					<span id="invViewStockQty">-</span>
+				</div>
+				<div class="inv-view-item">
+					<label>Reorder Level</label>
+					<span id="invViewReorderLevel">-</span>
+				</div>
 			</div>
 		</div>
 	</div>

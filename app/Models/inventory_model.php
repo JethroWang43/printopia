@@ -10,8 +10,8 @@ class inventory_model extends Model {
     protected $returnType = 'array';
 
     protected $allowedFields = [
-        'user_id','stock_qty','reorder_level',
-        'date_created','date_updated'
+        'product_name','stock_qty','reorder_level',
+        'description','date_created','date_updated'
     ];
 
     protected bool $allowEmptyInserts = false;

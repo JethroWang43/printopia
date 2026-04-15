@@ -20,6 +20,12 @@ $routes->get('admin/gallery/files', 'Gallery::files');
 $routes->get('admin/gallery/open/(:num)', 'Gallery::open/$1');
 $routes->post('admin/gallery/save_to_db', 'Gallery::save_to_db');
 $routes->post('admin/gallery/delete/(:num)', 'Gallery::delete/$1');
+$routes->get('admin/inventory/list', 'Inventory::list');
+$routes->post('admin/inventory/save', 'Inventory::save');
+$routes->post('admin/inventory/delete/(:num)', 'Inventory::delete/$1');
+$routes->get('admin/account/list', 'Account::list');
+$routes->post('admin/account/save', 'Account::save');
+$routes->post('admin/account/delete/(:num)', 'Account::delete/$1');
 
 // Trello task management embedded app
 $routes->get('trello-task/index.html', 'Admin::trelloTaskIndex');
@@ -54,6 +60,30 @@ $routes->group('printopia/admin/gallery', function($routes) {
     $routes->post('save_to_db', 'Gallery::save_to_db');
     // Change this to post
     $routes->post('delete/(:num)', 'Gallery::delete/$1'); 
+});
+
+$routes->group('printopia/admin/inventory', function($routes) {
+    $routes->get('list', 'Inventory::list');
+    $routes->post('save', 'Inventory::save');
+    $routes->post('delete/(:num)', 'Inventory::delete/$1');
+});
+
+$routes->group('printopia/admin/account', function($routes) {
+    $routes->get('list', 'Account::list');
+    $routes->post('save', 'Account::save');
+    $routes->post('delete/(:num)', 'Account::delete/$1');
+});
+
+$routes->group('Printopia/admin/inventory', function($routes) {
+    $routes->get('list', 'Inventory::list');
+    $routes->post('save', 'Inventory::save');
+    $routes->post('delete/(:num)', 'Inventory::delete/$1');
+});
+
+$routes->group('Printopia/admin/account', function($routes) {
+    $routes->get('list', 'Account::list');
+    $routes->post('save', 'Account::save');
+    $routes->post('delete/(:num)', 'Account::delete/$1');
 });
 
 $routes->get('printopia/trello-task/index.html', 'Admin::trelloTaskIndex');
