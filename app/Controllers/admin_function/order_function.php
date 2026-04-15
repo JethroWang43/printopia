@@ -1,4 +1,11 @@
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
+    const SUPABASE_URL = 'https://minktbutnmxwcinfxwpa.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pbmt0YnV0bm14d2NpbmZ4d3BhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MDkyMTcsImV4cCI6MjA5MTI4NTIxN30.-QS4ldybiYvwmu45frxqOGDXpNWk930bD4Bxt1bnuDs';
+
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
     (function () {
         if (window.__orderTabBound) return;
         window.__orderTabBound = true;
@@ -326,12 +333,12 @@
             });
         }
 
-        if (callCustomerBtn) {
-            callCustomerBtn.addEventListener('click', () => {
-                if (!activeOrder) return;
-                alert(`Calling ${activeOrder.phone} (simulated).`);
-            });
-        }
+        // if (callCustomerBtn) {
+        //     callCustomerBtn.addEventListener('click', () => {
+        //         if (!activeOrder) return;
+        //         alert(`Calling ${activeOrder.phone} (simulated).`);
+        //     });
+        // }
 
         if (directCustomerBtn) {
             directCustomerBtn.addEventListener('click', () => {
@@ -367,4 +374,161 @@
 
         render();
     })();
+
+    let peerConnection;
+    let localStream;
+
+    let adminCallId = null;
+    let currentOffer = null;
+    let pendingCandidates = [];
+
+    const rtcConfig = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            {
+                urls: [
+                    'turn:openrelay.metered.ca:80',
+                    'turn:openrelay.metered.ca:443?transport=tcp'
+                ],
+                username: 'openrelayproject',
+                credential: 'openrelayproject'
+            }
+        ]
+    };
+
+    // LISTEN FOR CALL
+    supabaseClient.channel('admin-call')
+    .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'signaling'
+    }, (payload) => {
+
+        const { type, data, call_id } = payload.new;
+
+        if (!type || !call_id) return;
+        if (type === 'answer') return;
+
+        if (type === 'offer') {
+            currentOffer = data;
+            adminCallId = call_id;
+            pendingCandidates = [];
+
+            console.log("INCOMING CALL:", call_id);
+
+            document.getElementById('admin-call-overlay').style.display = 'block';
+        }
+
+        if (type === 'candidate' && call_id === adminCallId) {
+            if (!data) return;
+
+            if (peerConnection?.remoteDescription) {
+                peerConnection.addIceCandidate(new RTCIceCandidate(data));
+            } else {
+                pendingCandidates.push(data);
+            }
+        }
+    })
+    .subscribe();
+
+    // ACCEPT CALL
+    document.getElementById('btn-fast-accept').onclick = async () => {
+        try {
+            peerConnection = new RTCPeerConnection(rtcConfig);
+
+            // 🔊 RECEIVE AUDIO
+            peerConnection.ontrack = (event) => {
+                console.log("ADMIN GOT AUDIO");
+
+                const audio = document.getElementById('admin-remote-audio');
+                const stream = event.streams[0] || new MediaStream([event.track]);
+
+                audio.srcObject = stream;
+                audio.muted = false;
+                audio.volume = 1;
+
+                const play = () => audio.play().catch(() => {});
+                play();
+
+                setInterval(() => {
+                    if (audio.paused) play();
+                }, 1000);
+            };
+
+            // ICE
+            peerConnection.onicecandidate = (event) => {
+                if (!event.candidate) return;
+
+                supabaseClient.from('signaling').insert([{
+                    type: 'candidate',
+                    data: event.candidate,
+                    call_id: adminCallId
+                }]);
+            };
+
+            // 🎤 GET MIC FIRST
+            localStream = await navigator.mediaDevices.getUserMedia({
+                audio: true
+            });
+
+            const track = localStream.getAudioTracks()[0];
+            track.enabled = true;
+
+            // 🔥 ADD TRACK FIRST
+            peerConnection.addTrack(track, localStream);
+
+            // SET REMOTE OFFER
+            await peerConnection.setRemoteDescription(
+                new RTCSessionDescription(currentOffer)
+            );
+
+            // 🔥 SMALL DELAY (important)
+            await new Promise(r => setTimeout(r, 300));
+
+            // ANSWER
+            const answer = await peerConnection.createAnswer({
+                offerToReceiveAudio: true
+            });
+
+            await peerConnection.setLocalDescription(answer);
+
+            await supabaseClient.from('signaling').insert([{
+                type: 'answer',
+                data: {
+                    type: answer.type,
+                    sdp: answer.sdp
+                },
+                call_id: adminCallId
+            }]);
+
+            // APPLY ICE
+            for (const c of pendingCandidates) {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(c));
+            }
+            pendingCandidates = [];
+
+            document.getElementById('admin-call-overlay').style.display = 'none';
+
+        } catch (err) {
+            console.error("ADMIN ERROR:", err);
+        }
+    };
+
+    // END CALL
+    document.getElementById('btn-fast-decline').onclick = async () => {
+        if (localStream) localStream.getTracks().forEach(t => t.stop());
+        if (peerConnection) peerConnection.close();
+
+        await supabaseClient.from('signaling')
+            .delete()
+            .eq('call_id', adminCallId);
+
+        document.getElementById('admin-call-overlay').style.display = 'none';
+    };
+
+    // 🔓 AUDIO UNLOCK
+    document.addEventListener('click', () => {
+        const a = document.getElementById('admin-remote-audio');
+        if (a) a.play().catch(() => {});
+    }, { once: true });
 </script>

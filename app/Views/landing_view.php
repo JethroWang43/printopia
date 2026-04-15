@@ -870,7 +870,7 @@
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"></path><line x1="23" y1="1" x2="1" y2="23"></line></svg>
             </button>
         </div>
-        <audio id="remote-audio" autoplay></audio>
+        <audio id="remote-audio" autoplay playsinline></audio>
     </div>
 </body>
 
@@ -934,61 +934,155 @@
         };
     }
 
-    // --- CALL SYSTEM ---
+    // Enter key support for chat 
+    const chatInput = document.getElementById('chat-input'); 
+        if (chatInput) { 
+            chatInput.addEventListener('keypress', (e) => { 
+            if (e.key === 'Enter') sendBtn.click(); 
+        }); 
+    }   
+     
     let localStream;
     let peerConnection;
-    const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-    let callTimer;
+    let callId = null;
+    let pendingCandidates = [];
 
-    const startCallBtn = document.getElementById('start-call-btn');
-    if (startCallBtn) {
-        startCallBtn.onclick = async () => {
-            try {
-                document.getElementById('call-label').innerText = "Connecting...";
-                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                
-                peerConnection = new RTCPeerConnection(rtcConfig);
-                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-                peerConnection.ontrack = (event) => {
-                    document.getElementById('remote-audio').srcObject = event.streams[0];
-                    startTimer();
-                    document.getElementById('call-label').innerText = "On Call";
-                };
-
-                peerConnection.onicecandidate = (event) => {
-                    if (event.candidate) {
-                        supabaseClient.from('signaling').insert([{ type: 'candidate', data: event.candidate }]);
-                    }
-                };
-
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-                await supabaseClient.from('signaling').insert([{ type: 'offer', data: offer }]);
-
-            } catch (err) {
-                alert("Call failed: " + err.message);
+    const rtcConfig = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            {
+                urls: [
+                    'turn:openrelay.metered.ca:80',
+                    'turn:openrelay.metered.ca:443?transport=tcp'
+                ],
+                username: 'openrelayproject',
+                credential: 'openrelayproject'
             }
-        };
-    }
+        ]
+    };
 
-    function startTimer() {
-        let seconds = 0;
-        if (callTimer) clearInterval(callTimer);
-        callTimer = setInterval(() => {
-            seconds++;
-            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
-            const secs = (seconds % 60).toString().padStart(2, '0');
-            document.getElementById('call-timer').innerText = `${mins}:${secs}`;
-        }, 1000);
-    }
+    // START CALL
+    document.getElementById('start-call-btn').onclick = async () => {
+        try {
+            callId = Date.now().toString();
+            console.log("CALL START:", callId);
 
-    // Enter key support for chat
-    const chatInput = document.getElementById('chat-input');
-    if (chatInput) {
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendBtn.click();
-        });
-    }
+            peerConnection = new RTCPeerConnection(rtcConfig);
+
+            // 🎤 GET MIC FIRST
+            localStream = await navigator.mediaDevices.getUserMedia({
+                audio: true
+            });
+
+            const track = localStream.getAudioTracks()[0];
+            track.enabled = true;
+
+            // 🔥 ADD TRACK FIRST
+            peerConnection.addTrack(track, localStream);
+
+            // 🔊 RECEIVE AUDIO
+            peerConnection.ontrack = (event) => {
+                console.log("USER RECEIVED AUDIO");
+
+                const audio = document.getElementById('remote-audio');
+                const stream = event.streams[0] || new MediaStream([event.track]);
+
+                audio.srcObject = stream;
+                audio.muted = false;
+                audio.volume = 1;
+
+                const play = () => audio.play().catch(() => {});
+                play();
+
+                setInterval(() => {
+                    if (audio.paused) play();
+                }, 1000);
+            };
+
+            // ICE
+            peerConnection.onicecandidate = (event) => {
+                if (!event.candidate) return;
+
+                supabaseClient.from('signaling').insert([{
+                    type: 'candidate',
+                    data: event.candidate,
+                    call_id: callId
+                }]);
+            };
+
+            // 🔥 CRITICAL DELAY (fixes silent audio)
+            await new Promise(r => setTimeout(r, 500));
+
+            // OFFER
+            const offer = await peerConnection.createOffer({
+                offerToReceiveAudio: true
+            });
+
+            await peerConnection.setLocalDescription(offer);
+
+            await supabaseClient.from('signaling').insert([{
+                type: 'offer',
+                data: {
+                    type: offer.type,
+                    sdp: offer.sdp
+                },
+                call_id: callId
+            }]);
+
+        } catch (err) {
+            console.error("CALL ERROR:", err);
+        }
+    };
+
+    // LISTEN FOR ANSWER
+    supabaseClient.channel('user-call')
+    .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'signaling'
+    }, async (payload) => {
+
+        const { type, data, call_id } = payload.new;
+        if (call_id !== callId) return;
+
+        if (type === 'answer') {
+            await peerConnection.setRemoteDescription(
+                new RTCSessionDescription(data)
+            );
+
+            for (const c of pendingCandidates) {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(c));
+            }
+            pendingCandidates = [];
+        }
+
+        if (type === 'candidate') {
+            if (!data) return;
+
+            if (peerConnection.remoteDescription) {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(data));
+            } else {
+                pendingCandidates.push(data);
+            }
+        }
+    })
+    .subscribe();
+
+    // END CALL
+    document.getElementById('end-call-btn').onclick = async () => {
+        if (localStream) localStream.getTracks().forEach(t => t.stop());
+        if (peerConnection) peerConnection.close();
+
+        await supabaseClient.from('signaling')
+            .delete()
+            .eq('call_id', callId);
+    };
+
+    // 🔓 AUDIO UNLOCK
+    document.addEventListener('click', () => {
+        const a = document.getElementById('remote-audio');
+        if (a) a.play().catch(() => {});
+    }, { once: true });
+
 </script>
 </html>
