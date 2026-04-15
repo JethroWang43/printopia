@@ -20,9 +20,16 @@ class AuthController extends ResourceController
     {
         $data = $this->request->getJSON(true) ?? $this->request->getPost();
 
-        if (!isset($data['email']) || !isset($data['password'])) {
-            return $this->fail("Email and password required");
-        }
+            if (
+                empty($data['first_name']) ||
+                empty($data['last_name']) ||
+                empty($data['email']) ||
+                empty($data['phone_number']) ||
+                empty($data['password'])
+            ) {
+                return $this->fail("All fields are required");
+            }
+            unset($data['confirm_password']); // Remove confirm_password from validation
 
         if(strlen($data['password']) < 6){
             return $this->fail("Password must be at least 6 characters");
@@ -31,17 +38,26 @@ class AuthController extends ResourceController
         $existing = $this->model->where('email', $data['email'])->first();
         if ($existing) return $this->fail("Email already registered");
 
-        $this->model->insert([ // palitan fields for Fname Lname cannot be null
+        log_message('debug', 'REACHED INSERT STEP');
+
+        $result = $this->model->insert([ // palitan fields for Fname Lname cannot be null
             'first_name' => $data['first_name'],
-            'middle_name' => $data['middle_name'] ?? null,
+            'middle_name' => $data['middle_name'] ?? '',
             'last_name'  => $data['last_name'],
             'email'      => $data['email'],
             'password'   => password_hash($data['password'], PASSWORD_DEFAULT),
-            'phone_number' => $data['phone_number'] ?? null,
-            'role_id' => $data['role_id'] ?? 3,
+            'phone_number' => $data['phone_number'],
+            'role_id' => 3,
             'date_created' => date('Y-m-d H:i:s'),
             'date_updated' => date('Y-m-d H:i:s'),
         ]);
+
+        if (!$result) {
+            return $this->respond([
+                'MODEL_ERRORS' => $this->model->errors(),
+                'DB_ERROR'     => db_connect()->error()
+            ]);
+        }
 
         return $this->respond([
             'status' => 'success',
@@ -85,7 +101,7 @@ class AuthController extends ResourceController
         $jwt = JWT::encode($payload, $this->key, 'HS256');
 
         // Default redirect
-        $redirectUrl = '/dashboard'; 
+        $redirectUrl = '/printopia/dashboard'; 
 
         // Role-based redirect
         if (isset($user['role_id'])) {
@@ -105,7 +121,7 @@ class AuthController extends ResourceController
                 'email' => $user['email'],
                 'first_name' => $user['first_name'],
                 'last_name' => $user['last_name'],
-                'role_id' => $user['role_id'] ?? null
+                'role_id' => $user['role_id'] ?? NULL
             ]
         ]);
     }

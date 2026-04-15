@@ -9,6 +9,7 @@ use CodeIgniter\Router\RouteCollection;
 // Routes for Index controller
 $routes->get('/', 'Index::index');
 $routes->get('dashboard', 'Index::index');
+$routes->get('printopia/dashboard', 'Index::index');
 $routes->get('products', 'Products::index');
 $routes->get('how-it-works', 'Howitwork::index');
 $routes->get('contact', 'Contact::index');
@@ -114,13 +115,13 @@ $routes->post('designs/delete/(:num)', 'Designs::delete/$1');
 // SIGNUP, LOGIN, LOGOUT
 // Web pages
 $routes->get('/signup', 'Api\AuthController::showSignupForm');
-$routes->post('/signup', 'Api\AuthController::register'); // form submission
+$routes->get('/login', 'Api\AuthController::showLoginform');
+$routes->get('/printopia/login', 'Api\AuthController::showLoginform');
 
-$routes->get('/login', 'Api\AuthController::showLoginForm');
-$routes->post('/login', 'Api\AuthController::login'); // form submission
 
-$routes->post('api/auth/register', 'Api\AuthController::register'); // API endpoint
-$routes->post('api/auth/login', 'Api\AuthController::login'); // API endpoint
+// API endpoints
+$routes->post('api/auth/register', 'Api\AuthController::register');
+$routes->post('api/auth/login', 'Api\AuthController::login');
 
 
 // FOR TEST

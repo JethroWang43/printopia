@@ -1,3 +1,5 @@
+console.log("Auth JS loaded");
+
 // Toggle password visibility
 function togglePassword(fieldId = 'password-field') {
     const passwordField = document.getElementById(fieldId);
@@ -14,7 +16,7 @@ if(loginForm){
         const formData = new FormData(this);
         const data = Object.fromEntries(formData.entries());
 
-        fetch("/api/auth/login", {
+        fetch("/printopia/api/auth/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data)
@@ -24,7 +26,7 @@ if(loginForm){
             if(res.status === "success"){
                 alert("Login successful! Welcome " + res.user.first_name);
                 console.log("JWT Token:", res.token);
-                window.location.href = "/dashboard";
+                window.location.href = "/printopia/dashboard";
                 // Optionally store JWT: sessionStorage.setItem('token', res.token);
             } else {
                 alert("Error: " + (res.message || "Login failed"));
@@ -49,7 +51,9 @@ if(signupForm){
             return;
         }
 
-        fetch("/api/auth/register", {
+        delete data.confirm_password; // Remove confirm_password before sending
+
+        fetch("/printopia/api/auth/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data)
@@ -58,7 +62,7 @@ if(signupForm){
         .then(res => {
             if(res.status === "success"){
                 alert("Registration successful! Please login.");
-                window.location.href = "/login";
+                window.location.href = "/printopia/login";
             } else {
                 alert("Error: " + (res.message || "Registration failed"));
             }
