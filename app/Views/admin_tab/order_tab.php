@@ -453,6 +453,12 @@
             grid-template-columns: 1fr;
         }
     }
+
+    @keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.5); opacity: 0.5; }
+    100% { transform: scale(1); opacity: 1; }
+}
 </style>
 
 <article class="content-section" id="order-management">
@@ -549,6 +555,20 @@
                 </div>
             </div>
         </div>
+
+        <div id="admin-call-overlay" style="display:none; position:fixed; top:20px; right:20px; z-index:9999; background:#10224f; color:white; padding:15px; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.3); border:2px solid #e7a821; min-width:250px;">
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                <div style="width:10px; height:10px; background:#e7a821; border-radius:50%; animation: pulse 1s infinite;"></div>
+                <strong id="caller-name-display">Incoming Call...</strong>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button id="btn-fast-accept" style="flex:1; background:#188a4b; color:white; border:none; padding:8px; border-radius:6px; font-weight:700; cursor:pointer;">Accept</button>
+                <button id="btn-fast-decline" style="background:#b22619; color:white; border:none; padding:8px; border-radius:6px; cursor:pointer;">X</button>
+            </div>
+        </div>
+
+        <audio id="admin-remote-audio" autoplay playsinline></audio>
+
     </section>
 </article>
 
