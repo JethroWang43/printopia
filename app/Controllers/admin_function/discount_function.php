@@ -54,6 +54,7 @@
 		let serverRows = [];
 		let searchDebounceTimer = null;
 		let userSearchDebounceTimer = null;
+		let editingDiscountId = null;
 
 		const state = {
 			search: '',
@@ -68,6 +69,20 @@
 			const isCreate = view === 'create';
 			manageView.classList.toggle('active', !isCreate);
 			createView.classList.toggle('active', isCreate);
+		};
+
+		const toDateTimeLocal = (value) => {
+			if (!value) return '';
+			const normalized = String(value).replace(' ', 'T');
+			const date = new Date(normalized);
+			if (Number.isNaN(date.getTime())) return '';
+			const pad = (n) => String(n).padStart(2, '0');
+			const yyyy = date.getFullYear();
+			const mm = pad(date.getMonth() + 1);
+			const dd = pad(date.getDate());
+			const hh = pad(date.getHours());
+			const mi = pad(date.getMinutes());
+			return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
 		};
 
 		const getPagedDiscounts = (rows) => {
@@ -95,7 +110,10 @@
 					<td><span class="discount-tag ${item.category === 'vip' ? 'specific' : ''}">${item.category || 'general'}</span></td>
 					<td>${Number(item.discount_percent || 0)}%</td>
 					<td>${item.max_uses ?? '-'}</td>
-					<td><button type="button" class="discount-edit" data-discount-delete="${item.discount_id}" title="Delete">🗑</button></td>
+					<td>
+						<button type="button" class="discount-edit" data-discount-edit="${item.discount_id}" title="Edit">✎</button>
+						<button type="button" class="discount-edit" data-discount-delete="${item.discount_id}" title="Delete">🗑</button>
+					</td>
 				</tr>
 			`).join('');
 		};
@@ -216,7 +234,66 @@
 				const end = endInput && endInput.value ? endInput.value.replace('T', ' ') : '-';
 				summarySchedule.textContent = `${start} to ${end}`;
 			}
-			if (summaryStatus) summaryStatus.textContent = 'Draft';
+			if (summaryStatus) summaryStatus.textContent = editingDiscountId ? 'Editing' : 'Draft';
+		};
+
+		const setRadioValue = (value) => {
+			const target = root.querySelector(`input[name="discountUserType"][value="${value}"]`);
+			if (target) target.checked = true;
+		};
+
+		const openEditMode = (item) => {
+			if (!item) return;
+
+			editingDiscountId = Number(item.discount_id || 0) || null;
+
+			if (codeInput) codeInput.value = item.code || '';
+			if (percentInput) percentInput.value = Number(item.discount_percent || 0);
+			if (startInput) startInput.value = toDateTimeLocal(item.start_at);
+			if (endInput) endInput.value = toDateTimeLocal(item.end_at);
+			if (limitToggle) limitToggle.checked = item.max_uses !== null && item.max_uses !== undefined;
+			if (limitInput) limitInput.value = item.max_uses || '';
+			if (oneTimeToggle) oneTimeToggle.checked = Number(item.one_time_only || 0) === 1;
+
+			if (item.selection === 'automatic') {
+				methodAutoBtn?.classList.add('active');
+				methodCodeBtn?.classList.remove('active');
+			} else {
+				methodCodeBtn?.classList.add('active');
+				methodAutoBtn?.classList.remove('active');
+			}
+
+			const eligibilityType = item.eligibility_type || 'all';
+			if (eligibilityType === 'segment') {
+				setRadioValue('segment');
+				if (segmentSelect) segmentSelect.value = item.segment_name_id || '';
+				if (specificCustomerInput) specificCustomerInput.value = '';
+				if (specificCustomerIdInput) specificCustomerIdInput.value = '';
+			} else if (eligibilityType === 'specific') {
+				setRadioValue('specific');
+				const segmentValue = String(item.segment_name_id || '');
+				if (segmentValue.startsWith('user:')) {
+					const userId = segmentValue.split(':')[1] || '';
+					if (specificCustomerIdInput) specificCustomerIdInput.value = userId;
+					if (specificCustomerInput) specificCustomerInput.value = `User #${userId}`;
+				} else {
+					if (specificCustomerInput) specificCustomerInput.value = segmentValue;
+					if (specificCustomerIdInput) specificCustomerIdInput.value = '';
+				}
+			} else {
+				setRadioValue('all');
+				if (specificCustomerInput) specificCustomerInput.value = '';
+				if (specificCustomerIdInput) specificCustomerIdInput.value = '';
+			}
+
+			if (addDiscountBtn) addDiscountBtn.textContent = 'Update Discount';
+			switchView('create');
+			updateSummary();
+		};
+
+		const resetCreateForm = () => {
+			editingDiscountId = null;
+			if (addDiscountBtn) addDiscountBtn.textContent = 'Add Discount';
 		};
 
 		const collectPayload = () => {
@@ -228,7 +305,7 @@
 			if (selectedUserType === 'segment') category = 'vip';
 			if (selectedUserType === 'all') category = 'seasonal';
 
-			return {
+			const payload = {
 				code: (codeInput?.value || '').trim(),
 				discount_percent: Number(percentInput?.value || 0),
 				selection: selectedMethod,
@@ -244,6 +321,12 @@
 				specific_customer_id: selectedUserType === 'specific' ? (specificCustomerIdInput?.value || '') : '',
 				eligibility_status_id: 1,
 			};
+
+			if (editingDiscountId) {
+				payload.discount_id = editingDiscountId;
+			}
+
+			return payload;
 		};
 
 		const saveDiscount = async () => {
@@ -275,10 +358,15 @@
 		};
 
 		if (openCreateBtn) {
-			openCreateBtn.addEventListener('click', () => switchView('create'));
+			openCreateBtn.addEventListener('click', () => {
+				resetCreateForm();
+				switchView('create');
+				updateSummary();
+			});
 		}
 		if (openManageBtn) {
 			openManageBtn.addEventListener('click', async () => {
+				resetCreateForm();
 				switchView('manage');
 				await renderManageView();
 			});
@@ -419,11 +507,13 @@
 
 		if (addDiscountBtn) {
 			addDiscountBtn.addEventListener('click', async () => {
+				const originalLabel = editingDiscountId ? 'Update Discount' : 'Add Discount';
 				try {
 					addDiscountBtn.disabled = true;
 					addDiscountBtn.textContent = 'Saving...';
 					await saveDiscount();
-					alert('Discount saved successfully.');
+					alert(editingDiscountId ? 'Discount updated successfully.' : 'Discount saved successfully.');
+					resetCreateForm();
 					switchView('manage');
 					state.page = 1;
 					await renderManageView();
@@ -431,13 +521,23 @@
 					alert(error.message || 'Failed to save discount.');
 				} finally {
 					addDiscountBtn.disabled = false;
-					addDiscountBtn.textContent = 'Add Discount';
+					addDiscountBtn.textContent = originalLabel;
 				}
 			});
 		}
 
 		if (tableBody) {
 			tableBody.addEventListener('click', async (event) => {
+				const editButton = event.target.closest('[data-discount-edit]');
+				if (editButton) {
+					const editId = Number(editButton.getAttribute('data-discount-edit') || 0);
+					const row = serverRows.find((item) => Number(item.discount_id) === editId);
+					if (row) {
+						openEditMode(row);
+					}
+					return;
+				}
+
 				const button = event.target.closest('[data-discount-delete]');
 				if (!button) return;
 
