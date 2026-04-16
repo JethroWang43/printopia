@@ -1,70 +1,68 @@
 <main class="login-page">
-  <div class="container-fluid p-0">
-    <div class="row g-0 min-vh-100 flex-column-reverse flex-lg-row-reverse">
+  <section class="login-shell" aria-label="Login page">
+    <aside class="pitch-panel">
+      <p class="pill-label">Printopia Studio</p>
+      <h1 class="brand-title">Bring your next custom design to life.</h1>
+      <p class="brand-subtitle">From concept to crafted output, your ideas stay in expert hands.</p>
 
-      <div class="col-lg-6 d-flex align-items-center justify-content-center branding-section">
-        <div class="branding-content px-5">
-          <h1 class="brand-title">Printopia</h1>
-          <p class="brand-subtitle">Start creating unique<br>Designs Today</p>
-          <ul class="feature-list list-unstyled">
-            <li><span class="check-icon">✔</span> Custom 3D Model Design</li>
-            <li><span class="check-icon">✔</span> Design Consultation</li>
-            <li><span class="check-icon">✔</span> Quality Assurance</li>
-            <li><span class="check-icon">✔</span> Trusted Order</li>
-          </ul>
-        </div>
+      <ul class="feature-list" aria-label="Printopia highlights">
+        <li><span class="check-icon" aria-hidden="true">&#10003;</span> Custom 3D model design</li>
+        <li><span class="check-icon" aria-hidden="true">&#10003;</span> One-on-one design consultation</li>
+        <li><span class="check-icon" aria-hidden="true">&#10003;</span> Production quality assurance</li>
+        <li><span class="check-icon" aria-hidden="true">&#10003;</span> Secure and trusted ordering</li>
+      </ul>
+    </aside>
+
+    <section class="form-panel">
+      <div class="form-card">
+        <header class="form-header">
+          <p class="eyebrow">Welcome back</p>
+          <h2>Sign in to continue</h2>
+          <p class="support-text">Access your dashboard, orders, and design history.</p>
+        </header>
+
+        <form id="loginForm" class="login-form">
+          <div class="field-group">
+            <label for="email" class="custom-label">Email address</label>
+            <div class="input-shell">
+              <span class="input-icon" aria-hidden="true">@</span>
+              <input id="email" type="email" name="email" class="form-control" placeholder="name@example.com" required>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label for="password-field" class="custom-label">Password</label>
+            <div class="input-shell password-group">
+              <span class="input-icon" aria-hidden="true">*</span>
+              <input type="password" name="password" class="form-control" placeholder="Enter your password" required id="password-field">
+              <button
+                type="button"
+                class="toggle-password"
+                data-toggle-password="password-field"
+                onclick="togglePassword('password-field')"
+                aria-label="Show password"
+              >Show</button>
+            </div>
+          </div>
+
+          <div class="meta-row">
+            <label class="remember-row" for="rememberMe">
+              <input type="checkbox" id="rememberMe">
+              <span>Remember me</span>
+            </label>
+            <a href="#" class="forgot-link">Forgot password?</a>
+          </div>
+
+          <button type="submit" class="btn-signin">Sign in to Printopia</button>
+        </form>
+
+        <p class="signup-text">
+          Don't have an account?
+          <a href="<?= base_url('/signup'); ?>">Create one now</a>
+        </p>
       </div>
-
-      <div class="col-lg-6 d-flex align-items-center justify-content-center bg-white">
-        <div class="form-wrapper p-5 w-100">
-          <header class="form-header mb-4">
-            <h2 class="welcome-text">Welcome Back</h2>
-            <p class="text-muted">Sign In to your account to continue</p>
-          </header>
-
-          <form id="loginForm">
-            <div class="mb-3">
-              <label class="form-label custom-label">Email Address <span class="text-danger">*</span></label>
-              <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                <input type="email" name="email" class="form-control" placeholder="Enter your email address" required>
-              </div>
-            </div>
-
-            <div class="mb-4">
-                <label class="form-label custom-label">Password *</label>
-                <div class="input-group password-group">
-                    <span class="input-group-text">🔒</span>
-                    <input type="password" name="password" class="form-control border-end-0" placeholder="Enter your password" required id="password-field">
-                    <span class="input-group-text bg-white border-start-0 toggle-password" onclick="togglePassword()">👁</span>
-                </div>
-            </div>
-
-            <div class="d-flex justify-content-between align-items-center mb-4 small">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="rememberMe">
-                <label class="form-check-label fw-bold" for="rememberMe">Remember me</label>
-              </div>
-              <a href="#" class="text-decoration-none fw-bold forgot-link">Forgot Password?</a>
-            </div>
-
-            <button type="submit" class="btn btn-signin w-100 py-2">
-              Sign In &rarr;
-            </button>
-          </form>
-
-          <p class="mt-4 text-center signup-text">
-            Don't have an account? 
-            <a href="<?= base_url('/signup'); ?>" class="fw-bold text-decoration-none">Sign Up here</a>
-          </p>
-        </div>
-      </div>
-
-    </div>
-  </div>
-  <div class="bottom-accent"></div>
+    </section>
+  </section>
 </main>
 
-<!-- Include external JS -->
-<script src="<?= base_url('public/js/auth.js') ?>"></script>
-<link rel="stylesheet" href="<?= base_url('public/css/auth.css') ?>">
+<script src="<?= base_url('/public/js/auth.js') ?>"></script>

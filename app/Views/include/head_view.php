@@ -7,6 +7,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="<?= base_url('/public/css/auth.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('/public/css/login.css') ?>">
     
     <style>
         :root {
@@ -26,13 +28,6 @@
             box-sizing: border-box;
         }
 
-
-    <link rel="stylesheet" href="<?= base_url('/css/auth.css') ?>">
-    <link rel="stylesheet" href="<?= base_url('/css/login.css') ?>">
-
-    <script src="<?= base_url('/js/login.js') ?>"></script>
-
-    <title><?= esc($title); ?></title>
         html {
             font-size: 16px;
         }
