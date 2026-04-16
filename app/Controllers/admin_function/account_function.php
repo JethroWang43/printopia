@@ -40,6 +40,8 @@
         const viewEmailEl = document.querySelector('#accountViewEmail');
         const viewPhoneEl = document.querySelector('#accountViewPhone');
         const viewLastEnteredEl = document.querySelector('#accountViewLastEntered');
+        const viewEmployeeRoleRow = document.querySelector('#accountViewEmployeeRoleRow');
+        const viewEmployeeRoleEl = document.querySelector('#accountViewEmployeeRole');
         const deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
         deleteBtn.id = 'accountDeleteBtn';
@@ -62,28 +64,48 @@
                 }
                 const result = await response.json();
                 
+                console.log('API Response:', result);
+                
                 if (result.success && Array.isArray(result.data)) {
+                    console.log('Raw accounts from API:', result.data);
+                    
                     // Map database fields to UI model
-                    accounts = result.data.map(user => ({
-                        id: user.user_id,
-                        user_id: user.user_id,
-                        firstName: user.first_name || '',
-                        lastName: user.last_name || '',
-                        name: `${user.first_name} ${user.last_name}`.trim(),
-                        email: user.email || '',
-                        phone: user.phone_number || '',
-                        role: user.role_id || 'user',
-                        middlewareName: user.middle_name || '',
-                        password: user.password || '',
-                        dateCreated: user.date_created || '',
-                        dateUpdated: user.date_updated || '',
-                        lastEntered: user.last_entered || user.date_updated || '',
-                    }));
+                    accounts = result.data.map(user => {
+                        // Convert numeric role_id to string role name
+                        let roleName = 'user'; // default
+                        if (user.role_id === 2 || user.role_id === '2') {
+                            roleName = 'employee';
+                        }
+                        
+                        return {
+                            id: user.user_id,
+                            user_id: user.user_id,
+                            firstName: user.first_name || '',
+                            lastName: user.last_name || '',
+                            name: `${user.first_name} ${user.last_name}`.trim(),
+                            email: user.email || '',
+                            phone: user.phone_number || '',
+                            role: roleName,
+                            roleId: user.role_id,
+                            employeeRole: user.employee_role || '',
+                            employeeRoleOther: user.employee_role_other || '',
+                            middlewareName: user.middle_name || '',
+                            password: user.password || '',
+                            dateCreated: user.date_created || '',
+                            dateUpdated: user.date_updated || '',
+                            lastEntered: user.last_entered || user.date_updated || '',
+                        };
+                    });
+                    
+                    console.log('Mapped accounts to display:', accounts);
+                    console.log('Role filter value:', roleFilter.value);
                     render();
                 } else {
+                    console.error('Invalid response:', result);
                     showErrorMessage('Failed to load accounts: Invalid response format');
                 }
             } catch (error) {
+                console.error('Account load error:', error);
                 log_message('error', `Account load error: ${error.message}`);
                 showErrorMessage(`Failed to load accounts: ${error.message}`);
             }
@@ -191,22 +213,22 @@
             const lastName = account?.lastName || '';
             const email = account?.email || '';
             const phone = account?.phone || '';
-            const role = account?.role || 'user';
+            const role = account?.role || 'user';  // role is now string 'user' or 'employee'
             const middleName = account?.middlewareName || '';
+            const employeeRole = account?.employeeRole || '';
+            const employeeRoleOther = account?.employeeRoleOther || '';
 
             if (createFirstNameInput) createFirstNameInput.value = firstName;
             if (createLastNameInput) createLastNameInput.value = lastName;
             if (createEmailInput) createEmailInput.value = email;
             if (createPhoneInput) createPhoneInput.value = phone;
-            if (createRoleInput) createRoleInput.value = role;
+            if (createRoleInput) createRoleInput.value = role;  // role is already 'user' or 'employee'
 
-            // For now, we'll assume role_id values map to 'user' or 'employee'
-            // This can be enhanced based on actual role_id values in the database
-
+            // Load employee role fields if employee
             if (employeeRoleSelectInput) {
-                employeeRoleSelectInput.value = '';
+                employeeRoleSelectInput.value = employeeRole;
                 if (employeeRoleOtherInput) {
-                    employeeRoleOtherInput.value = '';
+                    employeeRoleOtherInput.value = employeeRoleOther;
                 }
             }
 
@@ -262,17 +284,43 @@
             return raw;
         };
 
+        const formatEmployeeRoleForDisplay = (value) => {
+            if (!value) return '-';
+            
+            const roleMap = {
+                'production': 'Production Staff',
+                'designer': 'Designer',
+                'operator': 'Machine Operator',
+                'quality-control': 'Quality Control',
+                'others': 'Other'
+            };
+            
+            return roleMap[value] || value;
+        };
+
         const render = () => {
             const query = (searchInput.value || '').trim().toLowerCase();
             const selectedRole = roleFilter.value;
+
+            console.log('Rendering with:', { 
+                query, 
+                selectedRole, 
+                totalAccounts: accounts.length,
+                accounts: accounts
+            });
 
             const filtered = accounts.filter((account) => {
                 const matchesQuery = !query ||
                     account.name.toLowerCase().includes(query) ||
                     account.email.toLowerCase().includes(query);
                 const matchesRole = selectedRole === 'all' || account.role === selectedRole;
+                
+                console.log(`Account ${account.name}: matchesQuery=${matchesQuery}, matchesRole=${matchesRole}, role=${account.role}, selectedRole=${selectedRole}`);
+                
                 return matchesQuery && matchesRole;
             });
+
+            console.log('Filtered accounts:', filtered);
 
             if (!filtered.length) {
                 listEl.innerHTML = '<div class="account-empty">No account matched your filters.</div>';
@@ -338,9 +386,22 @@
             const role = (createRoleInput?.value || 'user').trim();
             const password = createPasswordInput?.value || '';
             const confirmPassword = createConfirmPasswordInput?.value || '';
+            const employeeRole = (employeeRoleSelectInput?.value || '').trim();
+            const employeeRoleOther = (employeeRoleOtherInput?.value || '').trim();
 
             if (!firstName || !lastName || !email || !phone) {
                 alert('Please fill in all required fields.');
+                return;
+            }
+
+            // Validate employee role when account type is employee
+            if (role === 'employee' && !employeeRole) {
+                alert('Please select an employee role.');
+                return;
+            }
+
+            if (role === 'employee' && employeeRole === 'others' && !employeeRoleOther) {
+                alert('Please specify the employee role.');
                 return;
             }
 
@@ -363,6 +424,14 @@
                     phone_number: phone,
                     role_id: role,
                 };
+
+                // Add employee role fields if account is employee
+                if (role === 'employee') {
+                    payload.employee_role = employeeRole;
+                    if (employeeRole === 'others') {
+                        payload.employee_role_other = employeeRoleOther;
+                    }
+                }
 
                 if (password) {
                     payload.password = password;
@@ -402,6 +471,7 @@
                             email,
                             phone,
                             role,
+                            employeeRole: role === 'employee' ? employeeRole : null,
                         }
                     };
 
@@ -440,10 +510,36 @@
                 return;
             }
 
+            console.log('Viewing account:', account);
+            console.log('Account role:', account.role);
+            console.log('Employee role:', account.employeeRole);
+            console.log('Is employee?', account.role === 'employee');
+
             if (viewNameEl) viewNameEl.textContent = account.name || '-';
             if (viewEmailEl) viewEmailEl.textContent = account.email || '-';
             if (viewPhoneEl) viewPhoneEl.textContent = account.phone || '-';
             if (viewLastEnteredEl) viewLastEnteredEl.textContent = formatDateForDisplay(account.lastEntered || '');
+            
+            // Show employee role only if account is employee
+            if (viewEmployeeRoleRow) {
+                if (account.role === 'employee' && account.employeeRole) {
+                    console.log('Showing employee role row');
+                    viewEmployeeRoleRow.style.display = '';
+                    if (viewEmployeeRoleEl) {
+                        viewEmployeeRoleEl.textContent = formatEmployeeRoleForDisplay(account.employeeRole);
+                    }
+                    // If it's "others", append the custom role
+                    if (account.employeeRole === 'others' && account.employeeRoleOther) {
+                        if (viewEmployeeRoleEl) {
+                            viewEmployeeRoleEl.textContent = account.employeeRoleOther;
+                        }
+                    }
+                } else {
+                    console.log('Hiding employee role row - role is', account.role, 'employeeRole is', account.employeeRole);
+                    viewEmployeeRoleRow.style.display = 'none';
+                }
+            }
+            
             setViewModalOpen(true);
         };
 
