@@ -3,8 +3,19 @@ console.log("Auth JS loaded");
 // Toggle password visibility
 function togglePassword(fieldId = 'password-field') {
     const passwordField = document.getElementById(fieldId);
+    if (!passwordField) {
+        return;
+    }
+
     const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
     passwordField.setAttribute('type', type);
+
+    const toggleButton = document.querySelector(`[data-toggle-password="${fieldId}"]`);
+    if (toggleButton) {
+        const isVisible = type === 'text';
+        toggleButton.textContent = isVisible ? 'Hide' : 'Show';
+        toggleButton.setAttribute('aria-label', isVisible ? 'Hide password' : 'Show password');
+    }
 }
 
 // -------- LOGIN --------
