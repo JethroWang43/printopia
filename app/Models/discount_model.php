@@ -12,6 +12,12 @@ class discount_model extends Model {
     protected $allowedFields = [
         'eligibility_id',
         'discount_percent',
+        'discount_type',
+        'discount_value',
+        'shipping_min_value',
+        'segment_type',
+        'segment_min_spend',
+        'segment_min_metric',
         'code',
         'selection',
         'status',

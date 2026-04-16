@@ -31,6 +31,7 @@ $routes->get('admin/discount/list', 'Discount::list');
 $routes->get('admin/discount/users', 'Discount::users');
 $routes->post('admin/discount/save', 'Discount::save');
 $routes->post('admin/discount/delete/(:num)', 'Discount::delete/$1');
+$routes->post('admin/discount/save-shipping', 'Discount::saveShipping');
 
 // Trello task management embedded app
 $routes->get('trello-task/index.html', 'Admin::trelloTaskIndex');
@@ -84,6 +85,7 @@ $routes->group('printopia/admin/discount', function($routes) {
     $routes->get('users', 'Discount::users');
     $routes->post('save', 'Discount::save');
     $routes->post('delete/(:num)', 'Discount::delete/$1');
+    $routes->post('save-shipping', 'Discount::saveShipping');
 });
 
 $routes->group('Printopia/admin/inventory', function($routes) {
@@ -103,6 +105,7 @@ $routes->group('Printopia/admin/discount', function($routes) {
     $routes->get('users', 'Discount::users');
     $routes->post('save', 'Discount::save');
     $routes->post('delete/(:num)', 'Discount::delete/$1');
+    $routes->post('save-shipping', 'Discount::saveShipping');
 });
 
 $routes->get('printopia/trello-task/index.html', 'Admin::trelloTaskIndex');
