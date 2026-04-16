@@ -4,7 +4,7 @@ namespace App\Models;
 use CodeIgniter\Model;
 
 class usereligibility_model extends Model {
-    protected $table = 'user_eligibility';
+    protected $table = 'user_eligibility_tbl';
     protected $primaryKey = 'eligibility_id';
     protected $useAutoIncrement = true;
     protected $returnType = 'array';

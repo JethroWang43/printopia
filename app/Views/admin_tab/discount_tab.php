@@ -44,6 +44,24 @@
 		box-shadow: 0 8px 14px rgba(21, 113, 61, 0.2);
 	}
 
+	.discount-header-actions {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.discount-secondary-btn {
+		border: 1px solid #c8d5ed;
+		border-radius: 10px;
+		background: #f6f9ff;
+		color: #2e4674;
+		padding: 10px 16px;
+		font-family: inherit;
+		font-size: 0.9rem;
+		font-weight: 700;
+		cursor: pointer;
+	}
+
 	.discount-toolbar {
 		border: 1px solid #dce4f2;
 		border-radius: 10px;
@@ -422,6 +440,45 @@
 		color: #6d7895;
 	}
 
+	.discount-user-search {
+		position: relative;
+	}
+
+	.discount-user-dropdown {
+		display: none;
+		position: absolute;
+		top: calc(100% + 4px);
+		left: 0;
+		right: 0;
+		max-height: 220px;
+		overflow-y: auto;
+		background: #ffffff;
+		border: 1px solid #cfd8ea;
+		border-radius: 8px;
+		box-shadow: 0 8px 18px rgba(16, 34, 79, 0.14);
+		z-index: 50;
+	}
+
+	.discount-user-dropdown.active {
+		display: block;
+	}
+
+	.discount-user-option {
+		padding: 9px 11px;
+		cursor: pointer;
+		font-size: 0.86rem;
+		color: #2f3e64;
+		border-top: 1px solid #edf2fb;
+	}
+
+	.discount-user-option:first-child {
+		border-top: 0;
+	}
+
+	.discount-user-option:hover {
+		background: #edf4ff;
+	}
+
 	@media (max-width: 1080px) {
 		.discount-create-grid {
 			grid-template-columns: 1fr;
@@ -433,6 +490,19 @@
 	}
 
 	@media (max-width: 900px) {
+		.discount-header {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+
+		.discount-header-actions {
+			width: 100%;
+		}
+
+		.discount-header-actions button {
+			flex: 1;
+		}
+
 		.discount-toolbar {
 			grid-template-columns: 1fr;
 		}
@@ -492,7 +562,10 @@
 		<div class="discount-view" data-discount-view="create">
 			<header class="discount-header">
 				<h3 class="discount-title">Create Discount</h3>
-				<button type="button" class="discount-primary-btn" id="discountAddBtn">Add Discount</button>
+				<div class="discount-header-actions">
+					<button type="button" class="discount-secondary-btn" data-discount-open-manage>Back to Manage</button>
+					<button type="button" class="discount-primary-btn" id="discountAddBtn">Add Discount</button>
+				</div>
 			</header>
 
 			<div class="discount-create-grid">
@@ -534,7 +607,11 @@
 								<option>Wholesale</option>
 							</select>
 							<label class="discount-radio"><input type="radio" name="discountUserType" value="specific"> Specific Customer</label>
-							<input type="text" class="discount-input" id="discountSpecificCustomerInput" placeholder="Search customer">
+							<div class="discount-user-search">
+								<input type="hidden" id="discountSpecificCustomerId">
+								<input type="text" class="discount-input" id="discountSpecificCustomerInput" placeholder="Search customer">
+								<div class="discount-user-dropdown" id="discountUserDropdown"></div>
+							</div>
 						</div>
 					</article>
 
@@ -566,10 +643,7 @@
 					<div class="discount-summary-item"><span>User</span><strong id="discountSummaryUser">All Customer</strong></div>
 					<div class="discount-summary-item"><span>Limit</span><strong id="discountSummaryLimit">3</strong></div>
 					<div class="discount-summary-item"><span>Schedule</span><strong id="discountSummarySchedule">Apr 5 - May 5</strong></div>
-					<div class="discount-field-block" style="margin-top: 14px;">
-						<button type="button" class="discount-primary-btn" data-discount-open-manage style="width:100%;">Back to Manage</button>
-					</div>
-					<p class="discount-note">Database is not connected yet. Add Discount will not be saved.</p>
+					<p class="discount-note">Connected to live database. New discounts will be saved and listed here.</p>
 				</aside>
 			</div>
 		</div>
