@@ -10,7 +10,17 @@ class discount_model extends Model {
     protected $returnType = 'array';
 
     protected $allowedFields = [
-        'eligibility_id','discount_percent','code','selection'
+        'eligibility_id',
+        'discount_percent',
+        'code',
+        'selection',
+        'status',
+        'category',
+        'start_at',
+        'end_at',
+        'max_uses',
+        'one_time_only',
+        'updated_at'
     ];
 
     protected bool $allowEmptyInserts = false;

@@ -32,6 +32,8 @@
 		const userRadios = root.querySelectorAll('input[name="discountUserType"]');
 		const segmentSelect = root.querySelector('#discountSegmentSelect');
 		const specificCustomerInput = root.querySelector('#discountSpecificCustomerInput');
+		const specificCustomerIdInput = root.querySelector('#discountSpecificCustomerId');
+		const userDropdown = root.querySelector('#discountUserDropdown');
 		const startInput = root.querySelector('#discountStartInput');
 		const endInput = root.querySelector('#discountEndInput');
 		const limitToggle = root.querySelector('#discountLimitToggle');
@@ -45,14 +47,13 @@
 		const summaryLimit = root.querySelector('#discountSummaryLimit');
 		const summarySchedule = root.querySelector('#discountSummarySchedule');
 
-		const discounts = [
-			{ id: 1, code: 'X530fe', status: 'active', customer: 'all', discount: 15, limitUse: 8, category: 'seasonal' },
-			{ id: 2, code: 'HAPFEB', status: 'ended', customer: 'specific', discount: 20, limitUse: 4, category: 'vip' },
-			{ id: 3, code: 'SUMMER10', status: 'active', customer: 'all', discount: 10, limitUse: 6, category: 'seasonal' },
-			{ id: 4, code: 'VIP25', status: 'ended', customer: 'specific', discount: 25, limitUse: 2, category: 'vip' },
-			{ id: 5, code: 'WINTER8', status: 'active', customer: 'all', discount: 8, limitUse: 9, category: 'seasonal' },
-			{ id: 6, code: 'MEMBER12', status: 'active', customer: 'specific', discount: 12, limitUse: 5, category: 'vip' }
-		];
+		const apiBase = window.location.pathname.toLowerCase().includes('/printopia/')
+			? '/printopia/admin/discount'
+			: '/admin/discount';
+
+		let serverRows = [];
+		let searchDebounceTimer = null;
+		let userSearchDebounceTimer = null;
 
 		const state = {
 			search: '',
@@ -60,7 +61,7 @@
 			status: 'all',
 			view: 'list',
 			page: 1,
-			pageSize: 8
+			pageSize: 8,
 		};
 
 		const switchView = (view) => {
@@ -69,22 +70,13 @@
 			createView.classList.toggle('active', isCreate);
 		};
 
-		const getFilteredDiscounts = () => {
-			return discounts.filter((item) => {
-				const matchSearch = !state.search || item.code.toLowerCase().includes(state.search.toLowerCase());
-				const matchCategory = state.category === 'all' || item.category === state.category;
-				const matchStatus = state.status === 'all' || item.status === state.status;
-				return matchSearch && matchCategory && matchStatus;
-			});
-		};
-
 		const getPagedDiscounts = (rows) => {
 			const totalPages = Math.max(1, Math.ceil(rows.length / state.pageSize));
 			state.page = Math.min(state.page, totalPages);
 			const start = (state.page - 1) * state.pageSize;
 			return {
 				rows: rows.slice(start, start + state.pageSize),
-				totalPages
+				totalPages,
 			};
 		};
 
@@ -97,13 +89,13 @@
 
 			tableBody.innerHTML = rows.map((item) => `
 				<tr>
-					<td>${item.id}</td>
-					<td>${item.code}</td>
-					<td><span class="discount-badge ${item.status}">${item.status === 'active' ? 'Active' : 'Ended'}</span></td>
-					<td><span class="discount-tag ${item.customer === 'specific' ? 'specific' : ''}">${item.customer === 'all' ? 'ALL' : 'Specific'}</span></td>
-					<td>${item.discount}%</td>
-					<td>${item.limitUse}</td>
-					<td><span class="discount-edit">✎</span></td>
+					<td>${item.discount_id}</td>
+					<td>${item.code || '-'}</td>
+					<td><span class="discount-badge ${item.status === 'ended' ? 'ended' : 'active'}">${item.status === 'ended' ? 'Ended' : 'Active'}</span></td>
+					<td><span class="discount-tag ${item.category === 'vip' ? 'specific' : ''}">${item.category || 'general'}</span></td>
+					<td>${Number(item.discount_percent || 0)}%</td>
+					<td>${item.max_uses ?? '-'}</td>
+					<td><button type="button" class="discount-edit" data-discount-delete="${item.discount_id}" title="Delete">🗑</button></td>
 				</tr>
 			`).join('');
 		};
@@ -117,12 +109,12 @@
 
 			gridWrap.innerHTML = rows.map((item) => `
 				<div class="discount-grid-card">
-					<h5>${item.code}</h5>
+					<h5>${item.code || '-'}</h5>
 					<div class="discount-grid-meta">
-						<span>Status: ${item.status === 'active' ? 'Active' : 'Ended'}</span>
-						<span>Customer: ${item.customer === 'all' ? 'ALL' : 'Specific'}</span>
-						<span>Discount: ${item.discount}%</span>
-						<span>Limit: ${item.limitUse}</span>
+						<span>Status: ${item.status === 'ended' ? 'Ended' : 'Active'}</span>
+						<span>Category: ${item.category || 'general'}</span>
+						<span>Discount: ${Number(item.discount_percent || 0)}%</span>
+						<span>Limit: ${item.max_uses ?? '-'}</span>
 					</div>
 				</div>
 			`).join('');
@@ -135,9 +127,63 @@
 			if (nextPageBtn) nextPageBtn.disabled = state.page >= totalPages;
 		};
 
-		const renderManageView = () => {
-			const filtered = getFilteredDiscounts();
-			const { rows, totalPages } = getPagedDiscounts(filtered);
+		const fetchDiscounts = async () => {
+			const query = new URLSearchParams();
+			if (state.search) query.set('search', state.search);
+			if (state.category && state.category !== 'all') query.set('category', state.category);
+			if (state.status && state.status !== 'all') query.set('status', state.status);
+
+			const response = await fetch(`${apiBase}/list?${query.toString()}`);
+			if (!response.ok) {
+				throw new Error('Failed to load discounts.');
+			}
+
+			const payload = await response.json();
+			serverRows = Array.isArray(payload.data) ? payload.data : [];
+		};
+
+		const closeUserDropdown = () => {
+			if (!userDropdown) return;
+			userDropdown.classList.remove('active');
+			userDropdown.innerHTML = '';
+		};
+
+		const renderUserDropdown = (users) => {
+			if (!userDropdown) return;
+			if (!Array.isArray(users) || users.length === 0) {
+				userDropdown.innerHTML = '<div class="discount-user-option">No matching users</div>';
+				userDropdown.classList.add('active');
+				return;
+			}
+
+			userDropdown.innerHTML = users.map((user) => {
+				const label = user.label || user.name || `User #${user.user_id}`;
+				return `<div class="discount-user-option" data-user-id="${user.user_id}" data-user-label="${String(label).replace(/"/g, '&quot;')}">${label}</div>`;
+			}).join('');
+			userDropdown.classList.add('active');
+		};
+
+		const searchUsers = async (query) => {
+			const response = await fetch(`${apiBase}/users?q=${encodeURIComponent(query)}`);
+			if (!response.ok) {
+				throw new Error('Failed to search users.');
+			}
+
+			const payload = await response.json();
+			return Array.isArray(payload.data) ? payload.data : [];
+		};
+
+		const renderManageView = async () => {
+			try {
+				await fetchDiscounts();
+			} catch (error) {
+				if (tableBody) {
+					tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#7f1d1d;">${error.message}</td></tr>`;
+				}
+				serverRows = [];
+			}
+
+			const { rows, totalPages } = getPagedDiscounts(serverRows);
 			renderListRows(rows);
 			renderGridRows(rows);
 			renderPagination(totalPages);
@@ -158,7 +204,7 @@
 
 		const updateSummary = () => {
 			if (summaryCode) summaryCode.textContent = (codeInput && codeInput.value.trim()) || 'DRAFT';
-			if (summaryDiscount) summaryDiscount.textContent = `${Number(percentInput && percentInput.value || 0)}%`;
+			if (summaryDiscount) summaryDiscount.textContent = `${Number((percentInput && percentInput.value) || 0)}%`;
 			if (summaryUser) summaryUser.textContent = selectedUserLabel();
 			if (summaryLimit) {
 				summaryLimit.textContent = limitToggle && limitToggle.checked
@@ -173,18 +219,79 @@
 			if (summaryStatus) summaryStatus.textContent = 'Draft';
 		};
 
+		const collectPayload = () => {
+			const selectedUserType = root.querySelector('input[name="discountUserType"]:checked')?.value || 'all';
+			const selectedMethod = methodAutoBtn && methodAutoBtn.classList.contains('active') ? 'automatic' : 'code';
+			const hasLimit = !!(limitToggle && limitToggle.checked);
+
+			let category = 'general';
+			if (selectedUserType === 'segment') category = 'vip';
+			if (selectedUserType === 'all') category = 'seasonal';
+
+			return {
+				code: (codeInput?.value || '').trim(),
+				discount_percent: Number(percentInput?.value || 0),
+				selection: selectedMethod,
+				status: 'active',
+				category,
+				start_at: startInput?.value || null,
+				end_at: endInput?.value || null,
+				max_uses: hasLimit ? Number(limitInput?.value || 0) : null,
+				one_time_only: !!(oneTimeToggle && oneTimeToggle.checked),
+				eligibility_type: selectedUserType,
+				segment_name_id: selectedUserType === 'segment' ? (segmentSelect?.value || '') : '',
+				specific_customer: selectedUserType === 'specific' ? (specificCustomerInput?.value || '').trim() : '',
+				specific_customer_id: selectedUserType === 'specific' ? (specificCustomerIdInput?.value || '') : '',
+				eligibility_status_id: 1,
+			};
+		};
+
+		const saveDiscount = async () => {
+			const response = await fetch(`${apiBase}/save`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(collectPayload()),
+			});
+
+			const result = await response.json();
+			if (!response.ok) {
+				throw new Error(result.error || result.message || 'Failed to save discount.');
+			}
+
+			return result;
+		};
+
+		const deleteDiscount = async (discountId) => {
+			const response = await fetch(`${apiBase}/delete/${discountId}`, {
+				method: 'POST',
+			});
+
+			const result = await response.json();
+			if (!response.ok) {
+				throw new Error(result.error || result.message || 'Failed to delete discount.');
+			}
+
+			return result;
+		};
+
 		if (openCreateBtn) {
 			openCreateBtn.addEventListener('click', () => switchView('create'));
 		}
 		if (openManageBtn) {
-			openManageBtn.addEventListener('click', () => switchView('manage'));
+			openManageBtn.addEventListener('click', async () => {
+				switchView('manage');
+				await renderManageView();
+			});
 		}
 
 		if (searchInput) {
 			searchInput.addEventListener('input', () => {
 				state.search = searchInput.value.trim();
 				state.page = 1;
-				renderManageView();
+				clearTimeout(searchDebounceTimer);
+				searchDebounceTimer = setTimeout(() => {
+					renderManageView();
+				}, 250);
 			});
 		}
 		if (categoryFilter) {
@@ -242,11 +349,109 @@
 			el.addEventListener('input', updateSummary);
 			el.addEventListener('change', updateSummary);
 		});
-		userRadios.forEach((radio) => radio.addEventListener('change', updateSummary));
+
+		if (specificCustomerInput && specificCustomerIdInput) {
+			specificCustomerInput.addEventListener('input', () => {
+				specificCustomerIdInput.value = '';
+				const query = specificCustomerInput.value.trim();
+				if (query.length < 2) {
+					closeUserDropdown();
+					return;
+				}
+
+				clearTimeout(userSearchDebounceTimer);
+				userSearchDebounceTimer = setTimeout(async () => {
+					try {
+						const users = await searchUsers(query);
+						renderUserDropdown(users);
+					} catch (error) {
+						if (userDropdown) {
+							userDropdown.innerHTML = `<div class="discount-user-option">${error.message}</div>`;
+							userDropdown.classList.add('active');
+						}
+					}
+				}, 220);
+			});
+
+			specificCustomerInput.addEventListener('focus', async () => {
+				const query = specificCustomerInput.value.trim();
+				if (query.length < 2) return;
+				try {
+					const users = await searchUsers(query);
+					renderUserDropdown(users);
+				} catch (error) {
+					closeUserDropdown();
+				}
+			});
+		}
+
+		if (userDropdown && specificCustomerInput && specificCustomerIdInput) {
+			userDropdown.addEventListener('click', (event) => {
+				const option = event.target.closest('[data-user-id]');
+				if (!option) return;
+
+				specificCustomerIdInput.value = option.getAttribute('data-user-id') || '';
+				specificCustomerInput.value = option.getAttribute('data-user-label') || '';
+				closeUserDropdown();
+				updateSummary();
+			});
+		}
+
+		document.addEventListener('click', (event) => {
+			if (!root.contains(event.target)) {
+				closeUserDropdown();
+				return;
+			}
+
+			const insideSearch = event.target.closest('.discount-user-search');
+			if (!insideSearch) {
+				closeUserDropdown();
+			}
+		});
+
+		userRadios.forEach((radio) => radio.addEventListener('change', () => {
+			const selected = root.querySelector('input[name="discountUserType"]:checked')?.value || 'all';
+			if (selected !== 'specific' && specificCustomerIdInput) {
+				specificCustomerIdInput.value = '';
+			}
+			updateSummary();
+		}));
 
 		if (addDiscountBtn) {
-			addDiscountBtn.addEventListener('click', () => {
-				alert('Create Discount is not available yet because the database is not connected.');
+			addDiscountBtn.addEventListener('click', async () => {
+				try {
+					addDiscountBtn.disabled = true;
+					addDiscountBtn.textContent = 'Saving...';
+					await saveDiscount();
+					alert('Discount saved successfully.');
+					switchView('manage');
+					state.page = 1;
+					await renderManageView();
+				} catch (error) {
+					alert(error.message || 'Failed to save discount.');
+				} finally {
+					addDiscountBtn.disabled = false;
+					addDiscountBtn.textContent = 'Add Discount';
+				}
+			});
+		}
+
+		if (tableBody) {
+			tableBody.addEventListener('click', async (event) => {
+				const button = event.target.closest('[data-discount-delete]');
+				if (!button) return;
+
+				const discountId = Number(button.getAttribute('data-discount-delete') || 0);
+				if (!discountId) return;
+
+				if (!confirm('Delete this discount?')) return;
+
+				try {
+					await deleteDiscount(discountId);
+					await renderManageView();
+				} catch (error) {
+					alert(error.message || 'Failed to delete discount.');
+				}
 			});
 		}
 
