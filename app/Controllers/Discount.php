@@ -18,7 +18,7 @@ class Discount extends BaseController
         $category = trim((string) ($this->request->getGet('category') ?? 'all'));
 
         $builder = $model->builder();
-        $builder->select('discount_tbl.discount_id, discount_tbl.code, discount_tbl.status, discount_tbl.category, discount_tbl.discount_percent, discount_tbl.max_uses, discount_tbl.selection, discount_tbl.start_at, discount_tbl.end_at, discount_tbl.one_time_only, ue.status AS eligibility_type, ue.segment_name_id');
+        $builder->select('discount_tbl.discount_id, discount_tbl.code, discount_tbl.status, discount_tbl.category, discount_tbl.discount_percent, discount_tbl.discount_type, discount_tbl.discount_value, discount_tbl.shipping_min_value, discount_tbl.segment_type, discount_tbl.segment_min_spend, discount_tbl.segment_min_metric, discount_tbl.max_uses, discount_tbl.selection, discount_tbl.start_at, discount_tbl.end_at, discount_tbl.one_time_only, ue.status AS eligibility_type, ue.segment_name_id');
         $builder->join('user_eligibility_tbl ue', 'ue.discount_id = discount_tbl.discount_id', 'left');
 
         if ($search !== '') {
@@ -88,7 +88,23 @@ class Discount extends BaseController
 
             $discountId = isset($payload['discount_id']) ? (int) $payload['discount_id'] : 0;
             $code = strtoupper(trim((string) ($payload['code'] ?? '')));
+            $discountType = trim((string) ($payload['discount_type'] ?? 'discount'));
             $discountPercent = isset($payload['discount_percent']) ? (float) $payload['discount_percent'] : 0;
+            $discountValue = isset($payload['discount_value']) ? (float) $payload['discount_value'] : $discountPercent;
+            $shippingMinValue = isset($payload['shipping_min_value']) && $payload['shipping_min_value'] !== ''
+                ? (float) $payload['shipping_min_value']
+                : null;
+            $segmentType = trim((string) ($payload['segment_type'] ?? ($payload['segment_condition_type'] ?? '')));
+            $segmentMinSpend = isset($payload['segment_min_spend'])
+                ? (float) $payload['segment_min_spend']
+                : (isset($payload['segment_condition_min_spend']) ? (float) $payload['segment_condition_min_spend'] : null);
+            $segmentMinMetric = isset($payload['segment_min_metric'])
+                ? (int) $payload['segment_min_metric']
+                : (isset($payload['segment_condition_min_orders']) && $payload['segment_condition_min_orders'] !== null
+                    ? (int) $payload['segment_condition_min_orders']
+                    : (isset($payload['segment_condition_min_bulk_qty']) && $payload['segment_condition_min_bulk_qty'] !== null
+                        ? (int) $payload['segment_condition_min_bulk_qty']
+                        : null));
             $selection = trim((string) ($payload['selection'] ?? 'code'));
             $status = trim((string) ($payload['status'] ?? 'active'));
             $category = trim((string) ($payload['category'] ?? 'general'));
@@ -112,8 +128,16 @@ class Discount extends BaseController
                 $errors[] = 'Discount code is required for code-based discounts.';
             }
 
-            if ($discountPercent <= 0 || $discountPercent > 100) {
+            if ($discountType === 'discount' && ($discountPercent <= 0 || $discountPercent > 100)) {
                 $errors[] = 'Discount percent must be greater than 0 and less than or equal to 100.';
+            }
+
+            if ($discountType === 'free_shipping' && $discountValue <= 0) {
+                $errors[] = 'Discount amount must be greater than 0 for free shipping option.';
+            }
+
+            if ($discountType === 'free_shipping' && ($shippingMinValue === null || $shippingMinValue < 0)) {
+                $errors[] = 'Shipping minimum value must be 0 or higher.';
             }
 
             if ($startAt !== '' && $endAt !== '') {
@@ -129,6 +153,10 @@ class Discount extends BaseController
                 $errors[] = 'Max uses must be greater than 0.';
             }
 
+            if ($maxUses === null && $oneTimeOnly !== 1) {
+                $errors[] = 'Please choose a usage option: Limit of total Uses or One time use ONLY.';
+            }
+
             if (!empty($errors)) {
                 return $this->response->setStatusCode(422)->setJSON([
                     'error' => implode(' ', $errors),
@@ -138,6 +166,12 @@ class Discount extends BaseController
             $record = [
                 'code' => $code,
                 'discount_percent' => $discountPercent,
+                'discount_type' => $discountType,
+                'discount_value' => $discountValue,
+                'shipping_min_value' => $shippingMinValue,
+                'segment_type' => $segmentType !== '' ? $segmentType : null,
+                'segment_min_spend' => $segmentMinSpend,
+                'segment_min_metric' => $segmentMinMetric,
                 'selection' => $selection,
                 'status' => $status,
                 'category' => $category,
@@ -289,5 +323,102 @@ class Discount extends BaseController
         }
 
         return (int) $insertedId;
+    }
+
+    public function saveShipping()
+    {
+        try {
+            $payload = $this->request->getJSON(true);
+            if (!is_array($payload)) {
+                $payload = $this->request->getPost();
+            }
+
+            $minOrderValue = isset($payload['min_order_value']) ? (float) $payload['min_order_value'] : 0;
+            $status = trim((string) ($payload['status'] ?? 'active'));
+            $startAt = trim((string) ($payload['start_at'] ?? ''));
+            $endAt = trim((string) ($payload['end_at'] ?? ''));
+            $eligibilityType = trim((string) ($payload['eligibility_type'] ?? 'all'));
+            $segmentNameId = trim((string) ($payload['segment_name_id'] ?? ''));
+            $specificCustomer = trim((string) ($payload['specific_customer'] ?? ''));
+            $specificCustomerId = isset($payload['specific_customer_id']) && $payload['specific_customer_id'] !== ''
+                ? (int) $payload['specific_customer_id']
+                : null;
+            $eligibilityStatusId = isset($payload['eligibility_status_id']) && $payload['eligibility_status_id'] !== ''
+                ? (int) $payload['eligibility_status_id']
+                : 1;
+
+            $errors = [];
+
+            if ($minOrderValue < 0) {
+                $errors[] = 'Minimum order value must be greater than or equal to 0.';
+            }
+
+            if ($startAt !== '' && $endAt !== '') {
+                $startTs = strtotime($startAt);
+                $endTs = strtotime($endAt);
+
+                if ($startTs !== false && $endTs !== false && $endTs < $startTs) {
+                    $errors[] = 'End date must be later than start date.';
+                }
+            }
+
+            if (!empty($errors)) {
+                return $this->response->setStatusCode(422)->setJSON([
+                    'error' => implode(' ', $errors),
+                ]);
+            }
+
+            $record = [
+                'min_order_value' => $minOrderValue,
+                'status' => $status,
+                'start_at' => $startAt !== '' ? date('Y-m-d H:i:s', strtotime($startAt)) : null,
+                'end_at' => $endAt !== '' ? date('Y-m-d H:i:s', strtotime($endAt)) : null,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ];
+
+            // For now, create a simple shipping record in the database
+            // This will be updated when you provide the final schema
+            $db = \Config\Database::connect();
+            $result = $db->table('free_shipping_tbl')->insert($record);
+
+            if (!$result) {
+                $dbError = $db->error();
+                return $this->response->setStatusCode(500)->setJSON([
+                    'error' => 'Failed to create free shipping rule.',
+                    'details' => $dbError['message'] ?? null,
+                ]);
+            }
+
+            $shippingId = $db->insertID();
+
+            // Store eligibility information
+            $segmentValue = 'all';
+            if ($eligibilityType === 'segment' && $segmentNameId !== '') {
+                $segmentValue = $segmentNameId;
+            } elseif ($eligibilityType === 'specific' && $specificCustomerId !== null) {
+                $segmentValue = 'user:' . $specificCustomerId;
+            } elseif ($eligibilityType === 'specific' && $specificCustomer !== '') {
+                $segmentValue = $specificCustomer;
+            }
+
+            $eligibilityData = [
+                'shipping_id' => $shippingId,
+                'eligibility_status_id' => $eligibilityStatusId,
+                'status' => $eligibilityType,
+                'granted_at' => date('Y-m-d H:i:s'),
+                'segment_name_id' => $segmentValue,
+            ];
+
+            $db->table('shipping_eligibility_tbl')->insert($eligibilityData);
+
+            return $this->response->setStatusCode(201)->setJSON([
+                'message' => 'Free shipping rule created.',
+                'shipping_id' => $shippingId,
+            ]);
+        } catch (Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'error' => 'Server error: ' . $e->getMessage(),
+            ]);
+        }
     }
 }

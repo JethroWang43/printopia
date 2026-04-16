@@ -479,6 +479,31 @@
 		background: #edf4ff;
 	}
 
+	.discount-segment-popup {
+		display: none;
+		margin-top: 10px;
+		border: 1px solid #cfe0f3;
+		border-radius: 10px;
+		background: #f8fbff;
+		padding: 10px;
+	}
+
+	.discount-segment-popup.active {
+		display: block;
+	}
+
+	.discount-segment-popup h5 {
+		margin: 0 0 8px;
+		font-size: 0.9rem;
+		color: #1e3a67;
+	}
+
+	.discount-segment-popup-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 8px;
+	}
+
 	@media (max-width: 1080px) {
 		.discount-create-grid {
 			grid-template-columns: 1fr;
@@ -487,33 +512,109 @@
 		.discount-summary {
 			position: static;
 		}
+
+		.discount-segment-popup-grid {
+			grid-template-columns: 1fr;
+		}
 	}
 
-	@media (max-width: 900px) {
-		.discount-header {
-			flex-direction: column;
-			align-items: flex-start;
-		}
+	.discount-modal-overlay {
+		display: none;
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(0, 0, 0, 0.5);
+		z-index: 100;
+		align-items: center;
+		justify-content: center;
+	}
 
-		.discount-header-actions {
-			width: 100%;
-		}
+	.discount-modal-overlay.active {
+		display: flex;
+	}
 
-		.discount-header-actions button {
-			flex: 1;
-		}
+	.discount-modal {
+		background: #ffffff;
+		border-radius: 12px;
+		box-shadow: 0 20px 60px rgba(16, 34, 79, 0.2);
+		padding: 24px;
+		max-width: 400px;
+		width: 90%;
+		animation: slideUp 0.3s ease-out;
+	}
 
-		.discount-toolbar {
-			grid-template-columns: 1fr;
+	@keyframes slideUp {
+		from {
+			transform: translateY(20px);
+			opacity: 0;
 		}
+		to {
+			transform: translateY(0);
+			opacity: 1;
+		}
+	}
 
-		.discount-table-wrap {
-			overflow-x: auto;
-		}
+	.discount-modal-header {
+		margin-bottom: 20px;
+		text-align: center;
+	}
 
-		.discount-form-row {
-			grid-template-columns: 1fr;
-		}
+	.discount-modal-title {
+		margin: 0;
+		color: #132659;
+		font-size: 1.4rem;
+		font-weight: 800;
+	}
+
+	.discount-modal-subtitle {
+		margin: 4px 0 0;
+		color: #6b7798;
+		font-size: 0.95rem;
+		font-weight: 500;
+	}
+
+	.discount-modal-content {
+		display: grid;
+		gap: 12px;
+		margin-bottom: 16px;
+	}
+
+	.discount-modal-actions {
+		display: flex;
+		gap: 10px;
+		justify-content: flex-end;
+	}
+
+	.discount-modal-actions button {
+		border: 1px solid #c8d5ed;
+		border-radius: 8px;
+		padding: 10px 16px;
+		font-family: inherit;
+		font-size: 0.9rem;
+		font-weight: 700;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.discount-modal-actions .cancel-btn {
+		background: #f6f9ff;
+		color: #2e4674;
+	}
+
+	.discount-modal-actions .cancel-btn:hover {
+		background: #edf3ff;
+	}
+
+	.discount-modal-actions .confirm-btn {
+		background: linear-gradient(180deg, #1f8f4f 0%, #15713d 100%);
+		color: #ffffff;
+		border: 1px solid #0f6838;
+	}
+
+	.discount-modal-actions .confirm-btn:hover {
+		opacity: 0.9;
 	}
 </style>
 
@@ -587,12 +688,27 @@
 					<article class="discount-card">
 						<h4>Value</h4>
 						<div class="discount-field-block">
-							<label>Order discount</label>
+							<label>Discount Option</label>
+							<select class="discount-select" id="discountValueTypeSelect">
+								<option value="discount" selected>Percentage Discount</option>
+								<option value="free_shipping">Free Shipping</option>
+							</select>
+						</div>
+						<div class="discount-field-block">
+							<label id="discountValueLabel">Order discount</label>
 							<div class="discount-inline">
 								<input type="number" min="0" max="100" class="discount-input" id="discountPercentInput" value="10">
-								<span class="discount-percent">%</span>
+								<span class="discount-percent" id="discountValueUnit">%</span>
 							</div>
-							<p class="discount-help">Percentage off</p>
+							<p class="discount-help" id="discountValueHelp">Percentage off</p>
+						</div>
+						<div class="discount-field-block" id="discountMinSpendWrap" style="display: none;">
+							<label>Minimum Spend to Claim</label>
+							<div class="discount-inline">
+								<span style="color: #5f6d8d; font-weight: 600;">₱</span>
+								<input type="number" min="0" step="0.01" class="discount-input" id="discountShippingMinInput" value="50.00">
+							</div>
+							<p class="discount-help">Set the minimum spend required to claim free shipping.</p>
 						</div>
 					</article>
 
@@ -606,6 +722,20 @@
 								<option>Loyal Customers</option>
 								<option>Wholesale</option>
 							</select>
+							<div class="discount-segment-popup" id="discountSegmentConditionPopup">
+								<h5 id="discountSegmentConditionTitle">Segment Discount Conditions</h5>
+								<div class="discount-segment-popup-grid">
+									<div class="discount-field-block" style="margin-top:0;">
+										<label id="discountSegmentMinSpendLabel">Minimum Spend</label>
+										<input type="number" min="0" step="0.01" class="discount-input" id="discountSegmentMinSpendInput" placeholder="e.g. 1000">
+									</div>
+									<div class="discount-field-block" style="margin-top:0;">
+										<label id="discountSegmentMetricLabel">Minimum Completed Orders</label>
+										<input type="number" min="0" class="discount-input" id="discountSegmentMinOrdersInput" placeholder="e.g. 5">
+									</div>
+								</div>
+								<p class="discount-help" id="discountSegmentConditionHelp">Set the conditions customers must meet before this segment discount is applied.</p>
+							</div>
 							<label class="discount-radio"><input type="radio" name="discountUserType" value="specific"> Specific Customer</label>
 							<div class="discount-user-search">
 								<input type="hidden" id="discountSpecificCustomerId">
