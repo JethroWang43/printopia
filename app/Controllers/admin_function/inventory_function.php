@@ -407,11 +407,25 @@
 			});
 		}
 
+		let inventoryDataInitialized = false;
 		const init = async () => {
+			if (inventoryDataInitialized) {
+				return;
+			}
+			inventoryDataInitialized = true;
 			await loadItems();
 			render();
 		};
 
-		init();
+		const inventorySection = document.getElementById('inventory-management');
+		if (inventorySection && inventorySection.classList.contains('active')) {
+			init();
+		}
+
+		document.addEventListener('printopia:section-opened', (event) => {
+			if (event?.detail?.sectionId === 'inventory-management') {
+				init();
+			}
+		});
 	})();
 </script>

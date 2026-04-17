@@ -100,6 +100,70 @@
         gap: 8px;
     }
 
+    .account-pagination {
+        margin-top: 12px;
+        border: 1px solid #d0dcea;
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: linear-gradient(135deg, #f9fbff 0%, #f4f8ff 100%);
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .account-pagination-summary {
+        color: #4f6288;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .account-pagination-controls {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .account-pagination-btn {
+        min-height: 30px;
+        border: 1px solid #cfd8ea;
+        border-radius: 8px;
+        background: #ffffff;
+        color: #334667;
+        font-family: inherit;
+        font-size: 0.78rem;
+        font-weight: 700;
+        padding: 0 10px;
+        cursor: pointer;
+    }
+
+    .account-pagination-btn:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+
+    .account-pagination-info {
+        color: #3d5480;
+        font-size: 0.78rem;
+        font-weight: 700;
+        min-width: 86px;
+        text-align: center;
+    }
+
+    .account-pagination-size {
+        min-height: 30px;
+        border: 1px solid #cfd8ea;
+        border-radius: 8px;
+        background: #ffffff;
+        color: #334667;
+        font-family: inherit;
+        font-size: 0.78rem;
+        font-weight: 700;
+        padding: 0 8px;
+    }
+
     .account-list-head {
         border: 1px solid #d0dcea;
         border-radius: 10px;
@@ -576,6 +640,21 @@
         </div>
 
         <div class="account-list" id="accountList"></div>
+
+        <div class="account-pagination" id="accountPagination" aria-label="Account list pagination">
+            <div class="account-pagination-summary" id="accountPaginationSummary">Showing 0-0 of 0 accounts</div>
+            <div class="account-pagination-controls">
+                <select class="account-pagination-size" id="accountPaginationPageSize" aria-label="Accounts per page">
+                    <option value="5">5 / page</option>
+                    <option value="8" selected>8 / page</option>
+                    <option value="10">10 / page</option>
+                    <option value="20">20 / page</option>
+                </select>
+                <button type="button" class="account-pagination-btn" id="accountPaginationPrev">Previous</button>
+                <span class="account-pagination-info" id="accountPaginationPageInfo">Page 1 of 1</span>
+                <button type="button" class="account-pagination-btn" id="accountPaginationNext">Next</button>
+            </div>
+        </div>
 
         <div class="account-modal-backdrop" id="accountCreateModal" aria-hidden="true">
             <form class="account-modal" id="accountCreateForm">

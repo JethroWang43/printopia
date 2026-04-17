@@ -556,7 +556,25 @@
             }
         });
 
-        refreshUploadFolderUI();
-        loadGalleryFiles();
+        let galleryDataInitialized = false;
+        const initializeGalleryData = () => {
+            if (galleryDataInitialized) {
+                return;
+            }
+            galleryDataInitialized = true;
+            refreshUploadFolderUI();
+            loadGalleryFiles();
+        };
+
+        const gallerySection = document.getElementById('gallery-management');
+        if (gallerySection && gallerySection.classList.contains('active')) {
+            initializeGalleryData();
+        }
+
+        document.addEventListener('printopia:section-opened', (event) => {
+            if (event?.detail?.sectionId === 'gallery-management') {
+                initializeGalleryData();
+            }
+        });
     });
 </script>

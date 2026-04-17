@@ -940,6 +940,10 @@
                     calendarFrame.src = calendarFrame.dataset.src;
                     emitHciInteraction('embed_view_opened', { section: 'calendar-management' });
                 }
+
+                document.dispatchEvent(new CustomEvent('printopia:section-opened', {
+                    detail: { sectionId }
+                }));
             };
 
             if (taskFrame) {
@@ -978,26 +982,10 @@
                 }
             }, 4500);
 
-            // Preload task iframe in the background so dashboard metrics can sync immediately.
-            if (taskFrame && taskFrame.src === 'about:blank' && taskFrame.dataset.src) {
-                taskFrame.src = taskFrame.dataset.src;
-                emitHciInteraction('embed_preload_started', { section: 'task-management' });
-            }
-
             // Guaranteed preload source for dashboard summary, independent from visible task tab iframe.
             if (taskSummaryLoader && taskSummaryLoader.src === 'about:blank' && taskSummaryLoader.dataset.src) {
                 taskSummaryLoader.src = taskSummaryLoader.dataset.src;
                 emitHciInteraction('summary_loader_started', { section: 'task-management' });
-            }
-
-            // Preload calendar iframe almost immediately to reduce first-open delay.
-            if (calendarFrame && calendarFrame.src === 'about:blank' && calendarFrame.dataset.src) {
-                setTimeout(() => {
-                    if (calendarFrame.src === 'about:blank') {
-                        calendarFrame.src = calendarFrame.dataset.src;
-                        emitHciInteraction('embed_preload_started', { section: 'calendar-management', delayMs: 100 });
-                    }
-                }, 100);
             }
 
             links.forEach(link => {

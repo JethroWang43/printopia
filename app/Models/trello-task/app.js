@@ -2907,16 +2907,7 @@ let allBoards = [];
 let currentBoardId = null;
 let orderCreationMode = 'manual'; // 'manual', 'template', 'ai', or 'quick'
 
-const fallbackEmployees = [
-    { id: 1, name: 'John Smith', role: 'Print Operator', avatar: '👨‍💼', color: '#FF6B6B' },
-    { id: 2, name: 'Maria Garcia', role: 'Designer', avatar: '👩‍🎨', color: '#4ECDC4' },
-    { id: 3, name: 'James Wilson', role: 'Quality Control', avatar: '👨‍🔧', color: '#95E1D3' },
-    { id: 4, name: 'Emily Chen', role: 'Production Manager', avatar: '👩‍💼', color: '#F38181' },
-    { id: 5, name: 'Michael Brown', role: 'Finishing Specialist', avatar: '👨‍🏭', color: '#AA96DA' },
-    { id: 6, name: 'Sarah Davis', role: 'Customer Service', avatar: '👩‍💻', color: '#FCBAD3' }
-];
-
-let employees = [...fallbackEmployees];
+let employees = [];
 
 function normalizeEmployeeRole(role, customRole = '') {
     const normalizedRole = String(role || '').trim().toLowerCase();
@@ -3005,10 +2996,10 @@ async function loadEmployees() {
             }
         }
     } catch (error) {
-        console.warn('Unable to load live employee accounts, using fallback list.', error);
+        console.warn('Unable to load live employee accounts.', error);
     }
 
-    employees = [...fallbackEmployees];
+    employees = [];
     return employees;
 }
 

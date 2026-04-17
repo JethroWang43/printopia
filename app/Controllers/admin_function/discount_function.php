@@ -736,10 +736,28 @@
 			});
 		}
 
-		renderManageView();
-		syncValueTypeUI();
-		syncSegmentConditionPopup();
-		syncUsageControls();
-		updateSummary();
+		let discountDataInitialized = false;
+		const initializeDiscountData = () => {
+			if (discountDataInitialized) {
+				return;
+			}
+			discountDataInitialized = true;
+			renderManageView();
+			syncValueTypeUI();
+			syncSegmentConditionPopup();
+			syncUsageControls();
+			updateSummary();
+		};
+
+		const discountSection = document.getElementById('discount-management');
+		if (discountSection && discountSection.classList.contains('active')) {
+			initializeDiscountData();
+		}
+
+		document.addEventListener('printopia:section-opened', (event) => {
+			if (event?.detail?.sectionId === 'discount-management') {
+				initializeDiscountData();
+			}
+		});
 	})();
 </script>

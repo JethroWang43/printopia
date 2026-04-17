@@ -1147,6 +1147,9 @@
             if (name.includes('done') || name.includes('completed') || name.includes('complete') || name.includes('finished')) {
                 return 'done';
             }
+            if (name.includes('todo') || name.includes('to do') || name.includes('backlog')) {
+                return 'todo';
+            }
             return 'pending';
         }
 
@@ -1170,12 +1173,32 @@
                 if (assignedDone >= assignedItems.length) {
                     return 'done';
                 }
+
+                if (assignedDone === 0) {
+                    return 'todo';
+                }
+
+                return 'pending';
             }
 
             if (allItems.length && allItems.every(function (item) {
                 return item.state === 'complete';
             })) {
                 return 'done';
+            }
+
+            if (allItems.length) {
+                const completeCount = allItems.filter(function (item) {
+                    return item.state === 'complete';
+                }).length;
+
+                if (completeCount === 0) {
+                    return 'todo';
+                }
+
+                if (completeCount < allItems.length) {
+                    return 'pending';
+                }
             }
 
             return listStatusTag(task && task.listName);
@@ -1316,7 +1339,7 @@
 
             container.innerHTML = tasks.map(function (task) {
                 const tag = taskCompletionTag(task, state.selectedEmployee);
-                const tagLabel = tag === 'done' ? 'Done' : 'Pending';
+                const tagLabel = tag === 'done' ? 'Done' : (tag === 'todo' ? 'To Do' : 'Pending');
                 return `
                     <button type="button" class="task-item task-button" data-card-id="${esc(task.cardId)}" title="Open task details">
                         <div>

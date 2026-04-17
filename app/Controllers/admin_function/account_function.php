@@ -13,6 +13,12 @@
         const listEl = document.querySelector('#accountList');
         const searchInput = document.querySelector('#accountSearchInput');
         const roleFilter = document.querySelector('#accountRoleFilter');
+        const paginationWrap = document.querySelector('#accountPagination');
+        const paginationSummary = document.querySelector('#accountPaginationSummary');
+        const paginationPageInfo = document.querySelector('#accountPaginationPageInfo');
+        const paginationPrev = document.querySelector('#accountPaginationPrev');
+        const paginationNext = document.querySelector('#accountPaginationNext');
+        const paginationPageSize = document.querySelector('#accountPaginationPageSize');
         const addBtn = document.querySelector('#accountAddBtn');
         const createModal = document.querySelector('#accountCreateModal');
         const viewModal = document.querySelector('#accountViewModal');
@@ -52,6 +58,8 @@
         let editAccountId = null;
         let modalMode = 'create';
         let accounts = [];
+        let accountPage = 1;
+        let accountPageSize = 8;
 
         /**
          * Load accounts from Supabase API
@@ -67,8 +75,6 @@
                 console.log('API Response:', result);
                 
                 if (result.success && Array.isArray(result.data)) {
-                    console.log('Raw accounts from API:', result.data);
-                    
                     // Map database fields to UI model
                     accounts = result.data.map(user => {
                         // Convert numeric role_id to string role name
@@ -96,9 +102,8 @@
                             lastEntered: user.last_entered || user.date_updated || '',
                         };
                     });
-                    
-                    console.log('Mapped accounts to display:', accounts);
-                    console.log('Role filter value:', roleFilter.value);
+
+                    accountPage = 1;
                     render();
                 } else {
                     console.error('Invalid response:', result);
@@ -302,32 +307,63 @@
             const query = (searchInput.value || '').trim().toLowerCase();
             const selectedRole = roleFilter.value;
 
-            console.log('Rendering with:', { 
-                query, 
-                selectedRole, 
-                totalAccounts: accounts.length,
-                accounts: accounts
-            });
-
             const filtered = accounts.filter((account) => {
                 const matchesQuery = !query ||
                     account.name.toLowerCase().includes(query) ||
                     account.email.toLowerCase().includes(query);
                 const matchesRole = selectedRole === 'all' || account.role === selectedRole;
-                
-                console.log(`Account ${account.name}: matchesQuery=${matchesQuery}, matchesRole=${matchesRole}, role=${account.role}, selectedRole=${selectedRole}`);
-                
+
                 return matchesQuery && matchesRole;
             });
 
-            console.log('Filtered accounts:', filtered);
+            const totalRows = filtered.length;
+            const totalPages = Math.max(1, Math.ceil(totalRows / accountPageSize));
+            if (accountPage > totalPages) {
+                accountPage = totalPages;
+            }
+            if (accountPage < 1) {
+                accountPage = 1;
+            }
+
+            const startIndex = (accountPage - 1) * accountPageSize;
+            const pagedAccounts = filtered.slice(startIndex, startIndex + accountPageSize);
+
+            if (paginationWrap) {
+                paginationWrap.style.display = totalRows ? 'flex' : 'none';
+            }
+
+            if (paginationSummary) {
+                if (!totalRows) {
+                    paginationSummary.textContent = 'Showing 0-0 of 0 accounts';
+                } else {
+                    const from = startIndex + 1;
+                    const to = Math.min(startIndex + pagedAccounts.length, totalRows);
+                    paginationSummary.textContent = `Showing ${from}-${to} of ${totalRows} accounts`;
+                }
+            }
+
+            if (paginationPageInfo) {
+                paginationPageInfo.textContent = `Page ${accountPage} of ${totalPages}`;
+            }
+
+            if (paginationPrev) {
+                paginationPrev.disabled = accountPage <= 1;
+            }
+
+            if (paginationNext) {
+                paginationNext.disabled = accountPage >= totalPages;
+            }
+
+            if (paginationPageSize && paginationPageSize.value !== String(accountPageSize)) {
+                paginationPageSize.value = String(accountPageSize);
+            }
 
             if (!filtered.length) {
                 listEl.innerHTML = '<div class="account-empty">No account matched your filters.</div>';
                 return;
             }
 
-            listEl.innerHTML = filtered.map((account) => `
+            listEl.innerHTML = pagedAccounts.map((account) => `
                 <article class="account-item" data-id="${account.id}" data-open-account="${account.id}" tabindex="0" role="button" aria-label="View or edit ${escapeHtml(account.name)}">
                     <div>
                         <strong>${escapeHtml(account.name)}</strong>
@@ -582,8 +618,34 @@
             }
         });
 
-        searchInput.addEventListener('input', render);
-        roleFilter.addEventListener('change', render);
+            searchInput.addEventListener('input', () => {
+                accountPage = 1;
+                render();
+            });
+            roleFilter.addEventListener('change', () => {
+                accountPage = 1;
+                render();
+            });
+
+            paginationPrev?.addEventListener('click', () => {
+                if (accountPage <= 1) {
+                    return;
+                }
+                accountPage -= 1;
+                render();
+            });
+
+            paginationNext?.addEventListener('click', () => {
+                accountPage += 1;
+                render();
+            });
+
+            paginationPageSize?.addEventListener('change', () => {
+                const parsed = Number.parseInt(paginationPageSize.value, 10);
+                accountPageSize = Number.isFinite(parsed) && parsed > 0 ? parsed : 8;
+                accountPage = 1;
+                render();
+            });
 
         // Add delete button to modal actions
         const modalActions = document.querySelector('.account-modal-actions');
@@ -598,7 +660,24 @@
             deleteAccount(editAccountId);
         });
 
-        // Initial load
-        loadAccounts();
+        let accountDataInitialized = false;
+        const initializeAccountData = () => {
+            if (accountDataInitialized) {
+                return;
+            }
+            accountDataInitialized = true;
+            loadAccounts();
+        };
+
+        const accountSection = document.getElementById('account-management');
+        if (accountSection && accountSection.classList.contains('active')) {
+            initializeAccountData();
+        }
+
+        document.addEventListener('printopia:section-opened', (event) => {
+            if (event?.detail?.sectionId === 'account-management') {
+                initializeAccountData();
+            }
+        });
     });
 </script>
