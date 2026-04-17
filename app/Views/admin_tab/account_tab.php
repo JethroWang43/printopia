@@ -292,7 +292,6 @@
         align-items: center;
         justify-content: center;
         padding: 14px;
-        backdrop-filter: blur(2px);
     }
 
     .account-modal-backdrop.show {
@@ -304,9 +303,9 @@
         border: 1px solid #dce4f3;
         border-radius: 14px;
         background: #ffffff;
-        box-shadow: 0 24px 48px rgba(16, 34, 79, 0.22), 0 0 1px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 16px 32px rgba(16, 34, 79, 0.18), 0 0 1px rgba(0, 0, 0, 0.06);
         overflow: hidden;
-        animation: modalSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        animation: modalSlideUp 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     @keyframes modalSlideUp {

@@ -72,8 +72,6 @@
                 }
                 const result = await response.json();
                 
-                console.log('API Response:', result);
-                
                 if (result.success && Array.isArray(result.data)) {
                     // Map database fields to UI model
                     accounts = result.data.map(user => {
@@ -106,12 +104,9 @@
                     accountPage = 1;
                     render();
                 } else {
-                    console.error('Invalid response:', result);
                     showErrorMessage('Failed to load accounts: Invalid response format');
                 }
             } catch (error) {
-                console.error('Account load error:', error);
-                log_message('error', `Account load error: ${error.message}`);
                 showErrorMessage(`Failed to load accounts: ${error.message}`);
             }
         };
@@ -378,6 +373,11 @@
         };
 
         addBtn.addEventListener('click', () => {
+            setModalContext('create');
+            setModalOpen(true);
+
+            // Defer form reset work to the next frame so modal paint is immediate.
+            requestAnimationFrame(() => {
             createForm?.reset();
             if (createRoleInput) {
                 createRoleInput.value = 'user';
@@ -388,9 +388,8 @@
             if (employeeRoleOtherInput) {
                 employeeRoleOtherInput.value = '';
             }
-            setModalContext('create');
             updateEmployeeRoleVisibility();
-            setModalOpen(true);
+            });
         });
 
         createRoleInput?.addEventListener('change', updateEmployeeRoleVisibility);
@@ -546,11 +545,6 @@
                 return;
             }
 
-            console.log('Viewing account:', account);
-            console.log('Account role:', account.role);
-            console.log('Employee role:', account.employeeRole);
-            console.log('Is employee?', account.role === 'employee');
-
             if (viewNameEl) viewNameEl.textContent = account.name || '-';
             if (viewEmailEl) viewEmailEl.textContent = account.email || '-';
             if (viewPhoneEl) viewPhoneEl.textContent = account.phone || '-';
@@ -559,7 +553,6 @@
             // Show employee role only if account is employee
             if (viewEmployeeRoleRow) {
                 if (account.role === 'employee' && account.employeeRole) {
-                    console.log('Showing employee role row');
                     viewEmployeeRoleRow.style.display = '';
                     if (viewEmployeeRoleEl) {
                         viewEmployeeRoleEl.textContent = formatEmployeeRoleForDisplay(account.employeeRole);
@@ -571,7 +564,6 @@
                         }
                     }
                 } else {
-                    console.log('Hiding employee role row - role is', account.role, 'employeeRole is', account.employeeRole);
                     viewEmployeeRoleRow.style.display = 'none';
                 }
             }
