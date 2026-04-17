@@ -6,6 +6,7 @@
         const controlSettingsKey = 'printopiaControlSettingsV1';
         const controlUiStateKey = 'printopiaControlUiStateV1';
         const accountsStorageKey = 'printopiaAccountsV1';
+        const accountsApiUrl = '<?= base_url('admin/account/list'); ?>';
         const adminList = document.querySelector('#adminControlsList');
         const adminFeaturesCount = document.querySelector('#adminFeaturesCount');
         const adminEmployeeList = document.querySelector('#adminEmployeeAccessList');
@@ -36,17 +37,58 @@
 
         const normalize = (value) => String(value || '').trim().toLowerCase();
 
-        const getEmployeeAccounts = () => {
+        let employeeAccounts = [];
+
+        const toDisplayRole = (role, roleOther = '') => {
+            const key = normalize(role);
+            const other = String(roleOther || '').trim();
+
+            if (key === 'production') return 'Production Staff';
+            if (key === 'designer') return 'Designer';
+            if (key === 'operator') return 'Machine Operator';
+            if (key === 'quality-control') return 'Quality Control';
+            if (key === 'others') return other || 'Employee';
+            return other || (key ? String(role).trim() : 'Unassigned');
+        };
+
+        const toDisplayName = (account) => {
+            const first = String(account?.first_name || '').trim();
+            const middle = String(account?.middle_name || '').trim();
+            const last = String(account?.last_name || '').trim();
+            const full = [first, middle, last].filter(Boolean).join(' ').trim();
+            return full || String(account?.name || '').trim();
+        };
+
+        const loadEmployeeAccounts = async () => {
             try {
-                const raw = JSON.parse(localStorage.getItem(accountsStorageKey) || '[]');
-                if (!Array.isArray(raw)) {
-                    return [];
+                const response = await fetch(accountsApiUrl, {
+                    headers: {
+                        Accept: 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error: ${response.status}`);
                 }
 
-                return raw.filter((account) => normalize(account?.role) === 'employee');
+                const payload = await response.json();
+                const rows = Array.isArray(payload?.data) ? payload.data : [];
+
+                employeeAccounts = rows
+                    .filter((account) => Number(account?.role_id) === 2)
+                    .map((account) => ({
+                        name: toDisplayName(account),
+                        role: 'employee',
+                        employeeRole: toDisplayRole(account?.employee_role, account?.employee_role_other),
+                    }))
+                    .filter((account) => account.name);
             } catch (error) {
-                return [];
+                employeeAccounts = [];
             }
+        };
+
+        const getEmployeeAccounts = () => {
+            return employeeAccounts.filter((account) => normalize(account?.role) === 'employee');
         };
 
         const employeeNameKey = (value) => normalize(value).replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -380,14 +422,25 @@
             renderSwitches();
         });
 
-        window.addEventListener('storage', (event) => {
+        window.addEventListener('storage', async (event) => {
             if (event.key === controlSettingsKey || event.key === accountsStorageKey) {
+                if (event.key === accountsStorageKey) {
+                    await loadEmployeeAccounts();
+                }
                 renderSwitches();
             }
         });
 
-        document.addEventListener('printopia:accounts-updated', renderSwitches);
+        document.addEventListener('printopia:accounts-updated', async () => {
+            await loadEmployeeAccounts();
+            renderSwitches();
+        });
 
-        renderSwitches();
+        const initializeControlTab = async () => {
+            await loadEmployeeAccounts();
+            renderSwitches();
+        };
+
+        void initializeControlTab();
     });
 </script>

@@ -633,14 +633,9 @@
                 </ul>
 
                 <div class="employee-picker">
-                    <label for="employeeFilter">Sample Employee</label>
-                    <select id="employeeFilter">
-                        <option value="john" data-employee-name="John Smith" data-employee-role="operator">John (Sample Employee)</option>
-                        <option value="maria" data-employee-name="Maria Garcia" data-employee-role="designer">Maria</option>
-                        <option value="james" data-employee-name="James Wilson" data-employee-role="quality-control">James</option>
-                        <option value="emily" data-employee-name="Emily Chen" data-employee-role="production-manager">Emily</option>
-                        <option value="michael" data-employee-name="Michael Brown" data-employee-role="finishing-specialist">Michael</option>
-                        <option value="sarah" data-employee-name="Sarah Davis" data-employee-role="customer-service">Sarah</option>
+                    <label for="employeeFilter">Employee</label>
+                    <select id="employeeFilter" disabled>
+                        <option value="">Loading employees...</option>
                     </select>
                     <div class="status-msg" id="employeeStatusMsg">Loading tasks from Trello...</div>
                 </div>
@@ -768,16 +763,137 @@
 
     <script>
         const TRELLO_PROXY_URL = <?= json_encode(base_url('trello-task/proxy')); ?>;
+        const EMPLOYEE_LIST_URL = <?= json_encode(base_url('admin/account/list')); ?>;
         const CHECKED_BY_STORAGE_KEY = 'checklistCheckedBy';
         const CONTROL_SETTINGS_KEY = 'printopiaControlSettingsV1';
+        const EMPLOYEE_TASK_CACHE_KEY = 'printopiaEmployeeTaskCacheV1';
+        const EMPLOYEE_TASK_CACHE_MAX_AGE_MS = 3 * 60 * 1000;
 
         const state = {
-            selectedEmployee: 'john',
+            selectedEmployee: '',
             tasks: []
         };
 
+        let employeeAccounts = [];
+
         function normalizeEmployeeName(value) {
             return normalize(value).replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+
+        function normalizeEmployeeRole(role, customRole = '') {
+            const normalizedRole = normalize(role);
+            const normalizedCustomRole = String(customRole || '').trim();
+
+            if (!normalizedRole) {
+                return 'Employee';
+            }
+
+            const roleLabels = {
+                production: 'Production Staff',
+                designer: 'Designer',
+                operator: 'Machine Operator',
+                'quality-control': 'Quality Control',
+                others: normalizedCustomRole || 'Employee'
+            };
+
+            return roleLabels[normalizedRole] || normalizedCustomRole || normalizedRole.replace(/-/g, ' ').replace(/\b\w/g, function (match) {
+                return match.toUpperCase();
+            });
+        }
+
+        function getEmployeeAvatar(role) {
+            const normalizedRole = normalize(role);
+
+            if (normalizedRole.includes('design')) return '👩‍🎨';
+            if (normalizedRole.includes('print') || normalizedRole.includes('production')) return '👨‍💼';
+            if (normalizedRole.includes('quality') || normalizedRole.includes('check')) return '👨‍🔧';
+            if (normalizedRole.includes('pack') || normalizedRole.includes('ship') || normalizedRole.includes('finishing')) return '👨‍🏭';
+            if (normalizedRole.includes('service')) return '👩‍💻';
+            return '👤';
+        }
+
+        function getEmployeeColor(employeeName) {
+            const palette = ['#FF6B6B', '#4ECDC4', '#95E1D3', '#F38181', '#AA96DA', '#FCBAD3', '#81A1C1', '#FFD166'];
+            const value = String(employeeName || '').trim().toLowerCase();
+
+            if (!value) {
+                return palette[0];
+            }
+
+            let hash = 0;
+            for (let index = 0; index < value.length; index += 1) {
+                hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+            }
+
+            return palette[hash % palette.length];
+        }
+
+        function mapEmployeeAccount(account, index) {
+            const firstName = String(account?.first_name || '').trim();
+            const middleName = String(account?.middle_name || '').trim();
+            const lastName = String(account?.last_name || '').trim();
+            const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ').trim();
+            const role = normalizeEmployeeRole(account?.employee_role, account?.employee_role_other);
+
+            return {
+                id: Number(account?.user_id) || index + 1,
+                name: fullName || `Employee ${index + 1}`,
+                role: role,
+                avatar: getEmployeeAvatar(role),
+                color: getEmployeeColor(fullName || role)
+            };
+        }
+
+        function renderEmployeeFilterOptions() {
+            const employeeFilter = document.getElementById('employeeFilter');
+            if (!employeeFilter) {
+                return;
+            }
+
+            if (!employeeAccounts.length) {
+                employeeFilter.innerHTML = '<option value="">No employees available</option>';
+                employeeFilter.disabled = true;
+                state.selectedEmployee = '';
+                return;
+            }
+
+            employeeFilter.disabled = false;
+            const fallbackSelection = state.selectedEmployee && employeeAccounts.some(function (employee) {
+                return employee.name === state.selectedEmployee;
+            }) ? state.selectedEmployee : employeeAccounts[0].name;
+
+            employeeFilter.innerHTML = employeeAccounts.map(function (employee) {
+                return `<option value="${esc(employee.name)}" data-employee-name="${esc(employee.name)}" data-employee-role="${esc(employee.role)}">${esc(employee.name)} (${esc(employee.role)})</option>`;
+            }).join('');
+
+            employeeFilter.value = fallbackSelection;
+            state.selectedEmployee = employeeFilter.value || fallbackSelection;
+        }
+
+        async function loadEmployees() {
+            try {
+                const response = await fetch(EMPLOYEE_LIST_URL, {
+                    headers: {
+                        Accept: 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                employeeAccounts = Array.isArray(result?.data)
+                    ? result.data.filter(function (user) {
+                        return Number(user?.role_id) === 2;
+                    }).map(mapEmployeeAccount)
+                    : [];
+            } catch (error) {
+                console.error('Failed to load employee accounts:', error);
+                employeeAccounts = [];
+            }
+
+            renderEmployeeFilterOptions();
         }
 
         function getCurrentEmployeeName() {
@@ -836,6 +952,52 @@
 
         function normalize(text) {
             return String(text || '').trim().toLowerCase();
+        }
+
+        function getEmployeeTaskCacheStore() {
+            try {
+                return JSON.parse(localStorage.getItem(EMPLOYEE_TASK_CACHE_KEY) || '{}');
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function readCachedEmployeeTasks(employeeName) {
+            const normalizedEmployee = normalize(employeeName);
+            if (!normalizedEmployee) {
+                return null;
+            }
+
+            const store = getEmployeeTaskCacheStore();
+            const cachedEntry = store[normalizedEmployee];
+            if (!cachedEntry || !Array.isArray(cachedEntry.tasks)) {
+                return null;
+            }
+
+            const cachedAt = Number(cachedEntry.cachedAt) || 0;
+            if (!cachedAt || (Date.now() - cachedAt) > EMPLOYEE_TASK_CACHE_MAX_AGE_MS) {
+                return null;
+            }
+
+            return cachedEntry;
+        }
+
+        function writeCachedEmployeeTasks(employeeName, tasks) {
+            const normalizedEmployee = normalize(employeeName);
+            if (!normalizedEmployee) {
+                return;
+            }
+
+            try {
+                const store = getEmployeeTaskCacheStore();
+                store[normalizedEmployee] = {
+                    cachedAt: Date.now(),
+                    tasks: Array.isArray(tasks) ? tasks : []
+                };
+                localStorage.setItem(EMPLOYEE_TASK_CACHE_KEY, JSON.stringify(store));
+            } catch (error) {
+                // Ignore cache write errors so task rendering never fails.
+            }
         }
 
         function getChecklistCheckedByMap() {
@@ -985,20 +1147,11 @@
             if (name.includes('done') || name.includes('completed') || name.includes('complete') || name.includes('finished')) {
                 return 'done';
             }
-            if (name.includes('todo') || name.includes('to do') || name.includes('backlog')) {
-                return 'todo';
-            }
             return 'pending';
         }
 
         function taskCompletionTag(task, employeeName) {
             const selected = normalize(employeeName || state.selectedEmployee);
-            const totalChecklistItems = Number(task && task.checkItemTotal) || 0;
-            const completedChecklistItems = Number(task && task.checkItemComplete) || 0;
-
-            if (totalChecklistItems > 0 && completedChecklistItems >= totalChecklistItems) {
-                return 'done';
-            }
 
             const checklists = Array.isArray(task && task.checklists) ? task.checklists : [];
             const allItems = checklists.flatMap(function (checklist) {
@@ -1026,6 +1179,28 @@
             }
 
             return listStatusTag(task && task.listName);
+        }
+
+        function getAssignedChecklistStats(task, employeeName) {
+            const selected = normalize(employeeName || state.selectedEmployee);
+            const checklists = Array.isArray(task && task.checklists) ? task.checklists : [];
+            const allItems = checklists.flatMap(function (checklist) {
+                return Array.isArray(checklist.checkItems) ? checklist.checkItems : [];
+            });
+
+            const assignedItems = allItems.filter(function (item) {
+                return parseChecklistAssignees(item.name).includes(selected);
+            });
+
+            const completedAssigned = assignedItems.filter(function (item) {
+                return item.state === 'complete';
+            }).length;
+
+            return {
+                total: assignedItems.length,
+                completed: completedAssigned,
+                pending: Math.max(assignedItems.length - completedAssigned, 0),
+            };
         }
 
         function normalizeListName(name) {
@@ -1141,7 +1316,7 @@
 
             container.innerHTML = tasks.map(function (task) {
                 const tag = taskCompletionTag(task, state.selectedEmployee);
-                const tagLabel = tag === 'done' ? 'Done' : (tag === 'todo' ? 'To Do' : 'Pending');
+                const tagLabel = tag === 'done' ? 'Done' : 'Pending';
                 return `
                     <button type="button" class="task-item task-button" data-card-id="${esc(task.cardId)}" title="Open task details">
                         <div>
@@ -1160,14 +1335,9 @@
             const body = document.getElementById('employeeTaskModalBody');
             if (!modal || !title || !body || !task) return;
 
-            console.log('Task data:', task);
-            console.log('Checklists:', task.checklists);
-
             const selected = normalize(state.selectedEmployee);
             const checklistItems = (task.checklists || []).flatMap(function (checklist) {
-                console.log('Processing checklist:', checklist);
                 return (checklist.checkItems || []).map(function (item) {
-                    console.log('Processing item:', item);
                     const done = item.state === 'complete';
                     const checkedByInfo = done ? getChecklistCheckedByInfo(task.cardId, item.id) : null;
                     const checkedByText = checkedByInfo ? formatCheckedByText(checkedByInfo) : '';
@@ -1216,19 +1386,98 @@
 
         async function updateEmployeeChecklistItem(cardId, checklistId, itemId, newState) {
             try {
-                console.log('Updating checklist item:', { cardId, checklistId, itemId, newState });
-
                 const result = await trelloRequestWithMethod(
                     `/cards/${cardId}/checkItem/${itemId}`,
                     'PUT',
                     { state: newState }
                 );
 
-                console.log('Checklist item updated successfully');
                 return result;
             } catch (error) {
                 console.error('Checklist item update failed:', error);
                 throw error;
+            }
+        }
+
+        const checklistUpdateLocks = new Set();
+        const checklistSyncTimers = new Map();
+
+        function hasChecklistLockForCard(cardId) {
+            const prefix = `${cardId}:`;
+            for (const lockKey of checklistUpdateLocks) {
+                if (lockKey.startsWith(prefix)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function queueChecklistCardSync(cardId, delayMs = 1800) {
+            if (!cardId) {
+                return;
+            }
+
+            const existingTimer = checklistSyncTimers.get(cardId);
+            if (existingTimer) {
+                window.clearTimeout(existingTimer);
+            }
+
+            const timer = window.setTimeout(function () {
+                if (hasChecklistLockForCard(cardId)) {
+                    queueChecklistCardSync(cardId, 800);
+                    return;
+                }
+
+                checklistSyncTimers.delete(cardId);
+                void refreshEmployeeCardData(cardId).catch(function (error) {
+                    console.error('Employee card refresh failed:', error);
+                });
+            }, delayMs);
+
+            checklistSyncTimers.set(cardId, timer);
+        }
+
+        function updateChecklistItemInState(cardId, itemId, newState) {
+            const taskIndex = state.tasks.findIndex(function (task) {
+                return task.cardId === cardId;
+            });
+
+            if (taskIndex === -1) {
+                return;
+            }
+
+            const task = state.tasks[taskIndex];
+            const checklists = Array.isArray(task.checklists) ? task.checklists : [];
+            let updated = false;
+
+            checklists.forEach(function (checklist) {
+                const items = Array.isArray(checklist.checkItems) ? checklist.checkItems : [];
+                items.forEach(function (item) {
+                    if (String(item.id) === String(itemId)) {
+                        item.state = newState;
+                        updated = true;
+                    }
+                });
+            });
+
+            if (!updated) {
+                return;
+            }
+
+            const allItems = checklists.flatMap(function (checklist) {
+                return Array.isArray(checklist.checkItems) ? checklist.checkItems : [];
+            });
+
+            task.checkItemTotal = allItems.length;
+            task.checkItemComplete = allItems.filter(function (item) {
+                return item.state === 'complete';
+            }).length;
+
+            renderDashboard();
+
+            const modal = document.getElementById('employeeTaskModal');
+            if (modal && modal.classList.contains('show')) {
+                renderEmployeeTaskModal(task);
             }
         }
 
@@ -1238,7 +1487,6 @@
 
             function setChecklistItemView(item, isDone) {
                 item.classList.toggle('done', isDone);
-                item.setAttribute('aria-busy', 'false');
                 const checkbox = item.querySelector('.employee-task-checklist-mark');
                 if (checkbox) {
                     checkbox.textContent = isDone ? '☑' : '☐';
@@ -1260,13 +1508,22 @@
                     const isDone = item.classList.contains('done');
                     const newState = isDone ? 'incomplete' : 'complete';
                     const nextDone = newState === 'complete';
+                    const lockKey = `${cardId}:${itemId}`;
+
+                    if (checklistUpdateLocks.has(lockKey)) {
+                        return;
+                    }
+
+                    checklistUpdateLocks.add(lockKey);
 
                     item.setAttribute('aria-busy', 'true');
+                    item.style.pointerEvents = 'none';
                     setChecklistItemView(item, nextDone);
 
                     try {
                         // Update in Trello
                         await updateEmployeeChecklistItem(cardId, checklistId, itemId, newState);
+                        updateChecklistItemInState(cardId, itemId, newState);
 
                         // Mirror admin logic: persist checked-by metadata for checklist item.
                         if (newState === 'complete') {
@@ -1279,18 +1536,18 @@
                         void autoMoveEmployeeCardByChecklistProgress(cardId).catch(function (error) {
                             console.error('Employee auto-move sync failed:', error);
                         });
-                        void refreshEmployeeCardData(cardId).catch(function (error) {
-                            console.error('Employee card refresh failed:', error);
-                        });
-                        void loadEmployeeTasks().catch(function (error) {
-                            console.error('Employee task reload failed:', error);
-                        });
+
+                        // Trello checklist updates are eventually consistent.
+                        // Coalesce refreshes so the modal does not bounce between states.
+                        queueChecklistCardSync(cardId);
                         
                     } catch (error) {
                         setChecklistItemView(item, isDone);
                         alert('Failed to update checklist item. Please try again.');
                     } finally {
+                        item.setAttribute('aria-busy', 'false');
                         item.style.pointerEvents = '';
+                        checklistUpdateLocks.delete(lockKey);
                     }
                 });
             });
@@ -1301,23 +1558,18 @@
                 // Find the task in state and refresh its data from Trello
                 const taskIndex = state.tasks.findIndex(function (t) { return t.cardId === cardId; });
                 if (taskIndex === -1) return;
-
-                const task = state.tasks[taskIndex];
-                console.log('Refreshing card data for:', cardId);
-                
                 // Fetch fresh card checklist data from Trello
                 const freshChecklists = await trelloRequest(`/cards/${cardId}/checklists`);
-                console.log('Fresh checklists data:', freshChecklists);
                 
                 if (freshChecklists) {
                     // Update the task object with fresh checklist data
                     state.tasks[taskIndex].checklists = freshChecklists;
-                    console.log('Updated task checklists, total items:', freshChecklists.reduce(function(sum, c) { return sum + (c.checkItems ? c.checkItems.length : 0); }, 0));
+
+                    renderDashboard();
                     
                     // Re-render the modal if it's currently open to show latest data
                     const modal = document.getElementById('employeeTaskModal');
                     if (modal && modal.classList.contains('show')) {
-                        console.log('Re-rendering modal with fresh data');
                         renderEmployeeTaskModal(state.tasks[taskIndex]);
                     }
                 }
@@ -1371,9 +1623,18 @@
             const doneTasks = state.tasks.filter(function (task) {
                 return taskCompletionTag(task, state.selectedEmployee) === 'done';
             });
-            document.getElementById('taskCount').textContent = String(activeTasks.length);
-            document.getElementById('completedTaskCount').textContent = String(doneTasks.length);
-            document.getElementById('notificationCount').textContent = String(activeTasks.length);
+
+            const checklistStats = state.tasks.reduce(function (accumulator, task) {
+                const stats = getAssignedChecklistStats(task, state.selectedEmployee);
+                accumulator.total += stats.total;
+                accumulator.completed += stats.completed;
+                accumulator.pending += stats.pending;
+                return accumulator;
+            }, { total: 0, completed: 0, pending: 0 });
+
+            document.getElementById('taskCount').textContent = String(checklistStats.pending);
+            document.getElementById('completedTaskCount').textContent = String(checklistStats.completed);
+            document.getElementById('notificationCount').textContent = String(checklistStats.pending);
             document.getElementById('pendingTaskHeading').textContent = 'Pending Task (' + activeTasks.length + ')';
             document.getElementById('completedTaskHeading').textContent = 'Completed Task (' + doneTasks.length + ')';
             renderTaskItems('pendingTaskList', activeTasks.slice(0, 6));
@@ -1382,28 +1643,47 @@
             renderTaskItems('notificationList', activeTasks.slice(0, 10));
         }
 
-        async function loadEmployeeTasks() {
+        let employeeTasksLoadInFlight = false;
+        let employeeTasksReloadQueued = false;
+
+        async function loadEmployeeTasks(options = {}) {
+            const force = Boolean(options && options.force);
+            if (employeeTasksLoadInFlight) {
+                employeeTasksReloadQueued = true;
+                return;
+            }
+
+            employeeTasksLoadInFlight = true;
             const statusMessage = document.getElementById('employeeStatusMsg');
+            const selectedEmployee = state.selectedEmployee;
+
+            if (!force) {
+                const cachedEntry = readCachedEmployeeTasks(selectedEmployee);
+                if (cachedEntry) {
+                    state.tasks = cachedEntry.tasks;
+                    renderDashboard();
+                    statusMessage.innerHTML = 'Showing cached tasks for <strong>' + esc(selectedEmployee) + '</strong>...';
+                }
+            }
+
             statusMessage.innerHTML = 'Loading Trello tasks for <strong>' + esc(state.selectedEmployee) + '</strong>...';
 
             try {
-                const [boards, member] = await Promise.all([
-                    trelloRequest('/members/me/boards?fields=id,name'),
-                    trelloRequest('/members/me')
-                ]);
+                const boards = await trelloRequest('/members/me/boards?fields=id,name');
 
                 if (!boards || !boards.length) {
                     state.tasks = [];
                     renderDashboard();
-                    statusMessage.innerHTML = 'No Trello boards found for <strong>' + esc(member.fullName || member.username || 'this account') + '</strong>.';
+                    writeCachedEmployeeTasks(selectedEmployee, []);
+                    statusMessage.innerHTML = 'No Trello boards found for <strong>' + esc(selectedEmployee || 'this employee') + '</strong>.';
                     return;
                 }
 
                 const boardCardPromises = boards.map(function (board) {
                     return Promise.all([
                         trelloRequest(`/boards/${board.id}/lists?fields=id,name`),
-                        // Fetch cards with all fields needed for admin-employee sync
-                        trelloRequest(`/boards/${board.id}/cards?fields=all&checklists=all`)
+                        // Keep payload lean for faster employee dashboard renders.
+                        trelloRequest(`/boards/${board.id}/cards?fields=id,name,due,idList,desc,shortLink,badges&checklists=all`)
                     ]).then(function (result) {
                         return {
                             board: board,
@@ -1458,6 +1738,7 @@
                 });
 
                 state.tasks = collected;
+                writeCachedEmployeeTasks(selectedEmployee, collected);
                 renderDashboard();
                 statusMessage.innerHTML = 'Connected to Trello. Showing tasks for <strong>' + esc(state.selectedEmployee) + '</strong>.';
             } catch (error) {
@@ -1465,6 +1746,12 @@
                 renderDashboard();
                 statusMessage.innerHTML = 'Could not load Trello data. Make sure the server Trello settings are available.';
                 console.error('Employee Trello load failed:', error);
+            } finally {
+                employeeTasksLoadInFlight = false;
+                if (employeeTasksReloadQueued) {
+                    employeeTasksReloadQueued = false;
+                    void loadEmployeeTasks();
+                }
             }
         }
 
@@ -1597,6 +1884,10 @@
 
         function setupEmployeeFilter() {
             const employeeFilter = document.getElementById('employeeFilter');
+            if (!employeeFilter) {
+                return;
+            }
+
             employeeFilter.addEventListener('change', async function () {
                 state.selectedEmployee = employeeFilter.value;
                 applyEmployeeTabControls();
@@ -1618,17 +1909,17 @@
             }
 
             employeeRefreshTimer = setInterval(async function () {
-                console.log('Auto-refreshing employee tasks data...');
                 await loadEmployeeTasks();
             }, settings.autoRefreshIntervalMs);
         }
 
         document.addEventListener('DOMContentLoaded', async function () {
             setupTabs();
+            await loadEmployees();
             applyEmployeeTabControls();
             setupEmployeeFilter();
             setupTaskDetailsOpen();
-            await loadEmployeeTasks();
+            void loadEmployeeTasks();
             applyEmployeeRefreshControls();
 
             window.addEventListener('storage', function (event) {
