@@ -759,6 +759,7 @@
             const sidebarHideBtn = document.querySelector('#sidebar-hide-btn');
             const sidebarShowBtn = document.querySelector('#sidebar-show-btn');
             const sidebarStateKey = 'adminSidebarHidden';
+            const activeSectionKey = 'adminActiveSection';
             const controlSettingsKey = 'printopiaControlSettingsV1';
             let dashboardSummaryReceived = false;
 
@@ -922,7 +923,23 @@
                 });
             };
 
-            const openSection = (sectionId, activeLink) => {
+            const validSectionIds = new Set(Array.from(sections).map((section) => section.id));
+
+            const getInitialSectionId = () => {
+                const hashSection = decodeURIComponent((window.location.hash || '').replace(/^#/, '').trim());
+                if (hashSection && validSectionIds.has(hashSection)) {
+                    return hashSection;
+                }
+
+                const storedSection = String(localStorage.getItem(activeSectionKey) || '').trim();
+                if (storedSection && validSectionIds.has(storedSection)) {
+                    return storedSection;
+                }
+
+                return '';
+            };
+
+            const openSection = (sectionId, activeLink, options = {}) => {
                 sections.forEach(section => {
                     section.classList.toggle('active', section.id === sectionId);
                 });
@@ -939,6 +956,14 @@
                 if (sectionId === 'calendar-management' && calendarFrame && calendarFrame.src === 'about:blank') {
                     calendarFrame.src = calendarFrame.dataset.src;
                     emitHciInteraction('embed_view_opened', { section: 'calendar-management' });
+                }
+
+                if (options.persist !== false) {
+                    localStorage.setItem(activeSectionKey, sectionId);
+                }
+
+                if (window.location.hash !== `#${sectionId}`) {
+                    history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${sectionId}`);
                 }
 
                 document.dispatchEvent(new CustomEvent('printopia:section-opened', {
@@ -1012,6 +1037,14 @@
 
             applySidebarState(localStorage.getItem(sidebarStateKey) === '1');
             applyControlSettings();
+
+            const initialSectionId = getInitialSectionId();
+            if (initialSectionId) {
+                const initialLink = document.querySelector(`.menu a[data-section="${initialSectionId}"]`);
+                if (initialLink && initialLink.parentElement.style.display !== 'none') {
+                    openSection(initialSectionId, initialLink);
+                }
+            }
         });
     </script>
 </body>

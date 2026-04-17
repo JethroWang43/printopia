@@ -65,6 +65,70 @@
 		const inputQuantity = document.querySelector('#invQuantityInput');
 		const inputReorder = document.querySelector('#invReorderInput');
 
+		const ensureRootPositioned = () => {
+			const computedPosition = window.getComputedStyle(root).position;
+			if (computedPosition === 'static') {
+				root.style.position = 'relative';
+			}
+		};
+
+		const createLoadingOverlay = (labelText) => {
+			ensureRootPositioned();
+
+			const overlay = document.createElement('div');
+			overlay.style.position = 'absolute';
+			overlay.style.inset = '0';
+			overlay.style.display = 'none';
+			overlay.style.alignItems = 'center';
+			overlay.style.justifyContent = 'center';
+			overlay.style.background = 'rgba(248, 251, 255, 0.86)';
+			overlay.style.backdropFilter = 'blur(1px)';
+			overlay.style.zIndex = '6';
+
+			const card = document.createElement('div');
+			card.style.display = 'inline-flex';
+			card.style.alignItems = 'center';
+			card.style.gap = '10px';
+			card.style.padding = '10px 14px';
+			card.style.border = '1px solid #d7e1f0';
+			card.style.borderRadius = '10px';
+			card.style.background = '#ffffff';
+			card.style.boxShadow = '0 8px 18px rgba(16, 34, 79, 0.12)';
+
+			const spinner = document.createElement('span');
+			spinner.style.width = '16px';
+			spinner.style.height = '16px';
+			spinner.style.border = '2px solid #c7d5ec';
+			spinner.style.borderTopColor = '#2f66c9';
+			spinner.style.borderRadius = '50%';
+			spinner.animate(
+				[{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }],
+				{ duration: 900, iterations: Infinity }
+			);
+
+			const text = document.createElement('span');
+			text.style.color = '#2f466e';
+			text.style.fontSize = '0.86rem';
+			text.style.fontWeight = '700';
+			text.textContent = labelText;
+
+			card.appendChild(spinner);
+			card.appendChild(text);
+			overlay.appendChild(card);
+			root.appendChild(overlay);
+
+			return {
+				setLoading: (isLoading, nextText) => {
+					if (nextText) {
+						text.textContent = nextText;
+					}
+					overlay.style.display = isLoading ? 'flex' : 'none';
+				}
+			};
+		};
+
+		const inventoryLoading = createLoadingOverlay('Loading inventory...');
+
 		const computeStatus = (item) => {
 			const qty = Number(item.stock_qty) || 0;
 			const reorder = Number(item.reorder_level) || 0;
@@ -77,6 +141,7 @@
 
 		const loadItems = async () => {
 			state.loading = true;
+			inventoryLoading.setLoading(true, 'Loading inventory...');
 			try {
 				const response = await fetch(API_LIST, {
 					headers: { 'Accept': 'application/json' }
@@ -100,6 +165,7 @@
 				alert('Failed to load inventory from database.');
 			} finally {
 				state.loading = false;
+				inventoryLoading.setLoading(false);
 			}
 		};
 

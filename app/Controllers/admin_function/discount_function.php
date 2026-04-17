@@ -79,6 +79,70 @@
 			pageSize: 8,
 		};
 
+		const ensureRootPositioned = () => {
+			const computedPosition = window.getComputedStyle(root).position;
+			if (computedPosition === 'static') {
+				root.style.position = 'relative';
+			}
+		};
+
+		const createLoadingOverlay = (labelText) => {
+			ensureRootPositioned();
+
+			const overlay = document.createElement('div');
+			overlay.style.position = 'absolute';
+			overlay.style.inset = '0';
+			overlay.style.display = 'none';
+			overlay.style.alignItems = 'center';
+			overlay.style.justifyContent = 'center';
+			overlay.style.background = 'rgba(248, 251, 255, 0.86)';
+			overlay.style.backdropFilter = 'blur(1px)';
+			overlay.style.zIndex = '6';
+
+			const card = document.createElement('div');
+			card.style.display = 'inline-flex';
+			card.style.alignItems = 'center';
+			card.style.gap = '10px';
+			card.style.padding = '10px 14px';
+			card.style.border = '1px solid #d7e1f0';
+			card.style.borderRadius = '10px';
+			card.style.background = '#ffffff';
+			card.style.boxShadow = '0 8px 18px rgba(16, 34, 79, 0.12)';
+
+			const spinner = document.createElement('span');
+			spinner.style.width = '16px';
+			spinner.style.height = '16px';
+			spinner.style.border = '2px solid #c7d5ec';
+			spinner.style.borderTopColor = '#2f66c9';
+			spinner.style.borderRadius = '50%';
+			spinner.animate(
+				[{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }],
+				{ duration: 900, iterations: Infinity }
+			);
+
+			const text = document.createElement('span');
+			text.style.color = '#2f466e';
+			text.style.fontSize = '0.86rem';
+			text.style.fontWeight = '700';
+			text.textContent = labelText;
+
+			card.appendChild(spinner);
+			card.appendChild(text);
+			overlay.appendChild(card);
+			root.appendChild(overlay);
+
+			return {
+				setLoading: (isLoading, nextText) => {
+					if (nextText) {
+						text.textContent = nextText;
+					}
+					overlay.style.display = isLoading ? 'flex' : 'none';
+				}
+			};
+		};
+
+		const discountLoading = createLoadingOverlay('Loading discounts...');
+
 		const switchView = (view) => {
 			const isCreate = view === 'create';
 			manageView.classList.toggle('active', !isCreate);
@@ -233,6 +297,7 @@
 		};
 
 		const renderManageView = async () => {
+			discountLoading.setLoading(true, 'Loading discounts...');
 			try {
 				await fetchDiscounts();
 			} catch (error) {
@@ -240,6 +305,8 @@
 					tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#7f1d1d;">${error.message}</td></tr>`;
 				}
 				serverRows = [];
+			} finally {
+				discountLoading.setLoading(false);
 			}
 
 			const { rows, totalPages } = getPagedDiscounts(serverRows);
