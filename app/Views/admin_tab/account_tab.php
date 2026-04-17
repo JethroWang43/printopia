@@ -684,6 +684,10 @@
                         <label>Last Entered</label>
                         <span id="accountViewLastEntered">-</span>
                     </div>
+                    <div class="account-view-row" id="accountViewEmployeeRoleRow" style="display:none;">
+                        <label>Employee Role</label>
+                        <span id="accountViewEmployeeRole">-</span>
+                    </div>
                 </div>
             </article>
         </div>

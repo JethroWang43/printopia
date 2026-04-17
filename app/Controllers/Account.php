@@ -44,6 +44,8 @@ class Account extends BaseController
                     'phone_number' => $user['phone_number'] ?? '',
                     'password' => $user['password'] ?? '',
                     'role_id' => $user['role_id'] ?? '',
+                    'employee_role' => $user['employee_role'] ?? '',
+                    'employee_role_other' => $user['employee_role_other'] ?? '',
                     'date_created' => $user['date_created'] ?? '',
                     'date_updated' => $user['date_updated'] ?? '',
                     'last_entered' => $user['last_entered'] ?? $user['date_updated'] ?? '',
@@ -83,6 +85,8 @@ class Account extends BaseController
             $roleInput = trim($this->request->getPost('role_id') ?? '');
             $userId = $this->request->getPost('user_id');
             $middleName = trim($this->request->getPost('middle_name') ?? '');
+            $employeeRole = trim($this->request->getPost('employee_role') ?? '');
+            $employeeRoleOther = trim($this->request->getPost('employee_role_other') ?? '');
 
             // Convert role name to role_id
             $roleId = $this->roleMap[$roleInput] ?? null;
@@ -115,6 +119,17 @@ class Account extends BaseController
                 $errors[] = 'Phone number is required';
             }
 
+            // Validate employee role if account type is employee
+            if ($roleId === 2) { // 2 = employee
+                if (empty($employeeRole)) {
+                    $errors[] = 'Employee role is required';
+                }
+                // If "others" is selected, require the custom role input
+                if ($employeeRole === 'others' && empty($employeeRoleOther)) {
+                    $errors[] = 'Please specify the employee role';
+                }
+            }
+
             // Only require password for new accounts (create mode)
             if (empty($userId) && empty($password)) {
                 $errors[] = 'Password is required for new accounts';
@@ -137,6 +152,8 @@ class Account extends BaseController
                     'email' => $email,
                     'phone_number' => $phoneNumber,
                     'role_id' => $roleId,
+                    'employee_role' => $roleId === 2 ? $employeeRole : null,
+                    'employee_role_other' => ($roleId === 2 && $employeeRole === 'others') ? $employeeRoleOther : null,
                     'date_updated' => date('Y-m-d H:i:s'),
                     'last_entered' => date('Y-m-d'),
                 ];
@@ -173,6 +190,8 @@ class Account extends BaseController
                     'phone_number' => $phoneNumber,
                     'password' => password_hash($password, PASSWORD_BCRYPT),
                     'role_id' => $roleId,
+                    'employee_role' => $roleId === 2 ? $employeeRole : null,
+                    'employee_role_other' => ($roleId === 2 && $employeeRole === 'others') ? $employeeRoleOther : null,
                     'date_created' => date('Y-m-d H:i:s'),
                     'date_updated' => date('Y-m-d H:i:s'),
                     'last_entered' => date('Y-m-d'),

@@ -11,7 +11,8 @@ class User_model extends Model {
 
     protected $allowedFields = [
         'first_name','middle_name','last_name','email','password',
-        'phone_number','role_id','date_created','date_updated','last_entered'
+        'phone_number','role_id','date_created','date_updated','last_entered',
+        'employee_role','employee_role_other'
     ];
 
     protected bool $allowEmptyInserts = false;

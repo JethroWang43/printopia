@@ -1,5 +1,6 @@
 // Trello API Configuration
 const TRELLO_PROXY_URL = './proxy';
+const EMPLOYEE_ACCOUNT_LIST_URL = new URL('../admin/account/list', window.location.href).toString();
 let employeeAccessMode = false;
 let currentEmployeeName = '';
 const EMBED_VIEW_MODE = (new URLSearchParams(window.location.search).get('view') || 'all').toLowerCase();
@@ -2892,6 +2893,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             deleteCalendarNote(deleteBtn.dataset.noteId);
         });
     }
+    await loadEmployees();
     initializeEmployeeAccessMode();
     setupFilterControls();
     const initialized = await initializeTrello();
@@ -2905,8 +2907,7 @@ let allBoards = [];
 let currentBoardId = null;
 let orderCreationMode = 'manual'; // 'manual', 'template', 'ai', or 'quick'
 
-// Dummy employees for the print shop
-const employees = [
+const fallbackEmployees = [
     { id: 1, name: 'John Smith', role: 'Print Operator', avatar: '👨‍💼', color: '#FF6B6B' },
     { id: 2, name: 'Maria Garcia', role: 'Designer', avatar: '👩‍🎨', color: '#4ECDC4' },
     { id: 3, name: 'James Wilson', role: 'Quality Control', avatar: '👨‍🔧', color: '#95E1D3' },
@@ -2914,6 +2915,102 @@ const employees = [
     { id: 5, name: 'Michael Brown', role: 'Finishing Specialist', avatar: '👨‍🏭', color: '#AA96DA' },
     { id: 6, name: 'Sarah Davis', role: 'Customer Service', avatar: '👩‍💻', color: '#FCBAD3' }
 ];
+
+let employees = [...fallbackEmployees];
+
+function normalizeEmployeeRole(role, customRole = '') {
+    const normalizedRole = String(role || '').trim().toLowerCase();
+    const normalizedCustomRole = String(customRole || '').trim();
+
+    if (!normalizedRole) {
+        return 'Employee';
+    }
+
+    const roleLabels = {
+        production: 'Production Staff',
+        designer: 'Designer',
+        operator: 'Machine Operator',
+        'quality-control': 'Quality Control',
+        others: normalizedCustomRole || 'Employee'
+    };
+
+    return roleLabels[normalizedRole] || normalizedCustomRole || normalizedRole.replace(/-/g, ' ').replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
+function getEmployeeAvatar(role) {
+    const normalizedRole = String(role || '').toLowerCase();
+
+    if (normalizedRole.includes('design')) return '👩‍🎨';
+    if (normalizedRole.includes('print') || normalizedRole.includes('production')) return '👨‍💼';
+    if (normalizedRole.includes('quality') || normalizedRole.includes('check')) return '👨‍🔧';
+    if (normalizedRole.includes('pack') || normalizedRole.includes('ship') || normalizedRole.includes('finishing')) return '👨‍🏭';
+    if (normalizedRole.includes('service')) return '👩‍💻';
+    return '👤';
+}
+
+function getEmployeeColor(employeeName) {
+    const palette = ['#FF6B6B', '#4ECDC4', '#95E1D3', '#F38181', '#AA96DA', '#FCBAD3', '#81A1C1', '#FFD166'];
+    const value = String(employeeName || '').trim().toLowerCase();
+
+    if (!value) {
+        return palette[0];
+    }
+
+    let hash = 0;
+    for (let index = 0; index < value.length; index += 1) {
+        hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+    }
+
+    return palette[hash % palette.length];
+}
+
+function mapEmployeeAccount(account, index) {
+    const firstName = String(account?.first_name || '').trim();
+    const middleName = String(account?.middle_name || '').trim();
+    const lastName = String(account?.last_name || '').trim();
+    const name = [firstName, middleName, lastName].filter(Boolean).join(' ').trim();
+    const role = normalizeEmployeeRole(account?.employee_role, account?.employee_role_other);
+
+    return {
+        id: Number(account?.user_id) || index + 1,
+        name: name || `Employee ${index + 1}`,
+        role,
+        avatar: getEmployeeAvatar(role),
+        color: getEmployeeColor(name || role),
+    };
+}
+
+async function loadEmployees() {
+    try {
+        const response = await fetch(EMPLOYEE_ACCOUNT_LIST_URL, {
+            headers: {
+                Accept: 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        if (result?.success && Array.isArray(result.data)) {
+            const liveEmployees = result.data
+                .filter((user) => Number(user?.role_id) === 2)
+                .map((user, index) => mapEmployeeAccount(user, index))
+                .filter((employee) => employee.name);
+
+            if (liveEmployees.length) {
+                employees = liveEmployees;
+                return employees;
+            }
+        }
+    } catch (error) {
+        console.warn('Unable to load live employee accounts, using fallback list.', error);
+    }
+
+    employees = [...fallbackEmployees];
+    return employees;
+}
 
 function updateEmployeeAccessUI() {
     const info = document.querySelector('#employeeAccessInfo');
